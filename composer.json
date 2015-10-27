@@ -1,0 +1,36 @@
+{
+    "name": "amixsi/zabbix",
+    "authors": [
+        {
+            "name": "Edison",
+            "email": "dinho.abreu@gmail.com"
+        }
+    ],
+    "require": {
+        "symfony/console": "2.5.x",
+        "psr/log": "~1.0",
+        "amixsi/helper": "dev-master",
+        "php-zabbix-api/zabbix-api": "dev-master"
+    },
+    "repositories": [
+        {
+            "type": "git",
+            "url": "https://github.com/rsimiciuc/PhpZabbixApi.git"
+        },
+        {
+            "type": "git",
+            "url": "amsxp02:/Work/prj/amixsi-helper.git"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Amixsi\\": "src/Amixsi/"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~4.8"
+    },
+    "scripts": {
+        "test": "phpunit"
+    }
+}
