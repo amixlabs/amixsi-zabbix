@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "7e3217c87fae90e1003bd096d4a0bcef",
-    "content-hash": "f868fcdee0d702e53f3994de948a5a76",
+    "hash": "76b9f6e91cd60528a3712d5555ee09fb",
+    "content-hash": "1798541bb985aba804123fe6f83bbba9",
     "packages": [
         {
             "name": "amixsi/helper",
