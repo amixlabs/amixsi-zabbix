@@ -595,4 +595,33 @@ class ZabbixApi extends \ZabbixApi
     {
         return $this->request('apiinfo.version', $params, $arrayKeyProperty, false);
     }
+
+    public function groupItemApplicationGet(array $params)
+    {
+        $params = array_merge($params, array(
+            'selectHosts' => array('name'),
+            'output' => array(
+                'itemid',
+                'hostid',
+                'name',
+                'value_type',
+                'units',
+                'lastclock',
+                'lastvalue',
+                'prevvalue'
+            )
+        ));
+        $items = $this->itemGet($params);
+        $items = array_map(function ($item) {
+            $item->parsedName = Util::parseItemKeyValue($item->name);
+            if ($item->units == 'B') {
+                $item->lastvalue = Util::byteSize($item->lastvalue);
+                $item->prevvalue = Util::byteSize($item->prevvalue);
+            }
+            return $item;
+        }, $items);
+        $items = Util::groupItemsByParsedName($items);
+        $groups = Util::normalizeGroupItems($items);
+        return $groups;
+    }
 }

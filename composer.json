@@ -10,7 +10,8 @@
         "symfony/console": "2.5.x",
         "psr/log": "~1.0",
         "amixsi/helper": "dev-master",
-        "php-zabbix-api/zabbix-api": "dev-master"
+        "php-zabbix-api/zabbix-api": "dev-master",
+        "rych/bytesize": "^1.0"
     },
     "repositories": [
         {

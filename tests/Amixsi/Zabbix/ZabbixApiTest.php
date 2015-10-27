@@ -85,4 +85,73 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
         $this->assertInternalType('float', $current->availability);
         $this->assertEquals($disaster, $current->priority);
     }
+
+    public function testApplication()
+    {
+        $apps = $this->api->applicationGet(array(
+            'hostids' => '13867',
+            'output' => 'extend',
+            'search' => array(
+                'name' => 'mdiskgrp'
+            )
+        ));
+        $this->assertCount(1, $apps);
+        $this->assertObjectHasAttribute('applicationid', $apps[0]);
+        $this->assertEquals(92135, $apps[0]->applicationid);
+        $this->assertInternalType('array', $apps[0]->templateids);
+        $this->assertEquals(92212, $apps[0]->templateids[0]);
+    }
+
+    public function testGroupItemApplication()
+    {
+        $groupItems = $this->api->groupItemApplicationGet(array(
+            'applicationids' => array(92135, 92206),
+        ));
+        $this->assertArrayHasKey('groups', $groupItems);
+        $this->assertArrayHasKey('commonKeys', $groupItems);
+        $groups = $groupItems['groups'];
+        $commonKeys = $groupItems['commonKeys'];
+        $this->assertInternalType('array', $groups);
+        $this->assertInternalType('array', $commonKeys);
+        $expectedCommonKeys = array(
+            "hostname",
+            "hostid",
+            "overallocation",
+            "status",
+            "compression_compressed_capacity",
+            "mdisk_count",
+            "parent_mdisk_grp_name",
+            "warning",
+            "compression_uncompressed_capacity",
+            "real_capacity",
+            "compression_virtual_capacity",
+            "encrypt",
+            "used_capacity",
+            "type",
+            "easy_tier_status",
+            "virtual_capacity",
+            "child_mdisk_grp_capacity",
+            "vdisk_count",
+            "parent_mdisk_grp_id",
+            "extent_size",
+            "name",
+            "easy_tier",
+            "free_capacity",
+            "child_mdisk_grp_count",
+            "capacity"
+        );
+        $this->assertEquals($expectedCommonKeys, $commonKeys);
+        $group = $groups[0];
+        foreach ($commonKeys as $key) {
+            $this->assertArrayHasKey($key, $group);
+            $item = $group[$key];
+            $this->assertArrayHasKey('name', $item);
+            $this->assertArrayHasKey('lastvalue', $item);
+            if (!in_array($key, array('hostname', 'hostid'))) {
+                $this->assertArrayHasKey('itemid', $item);
+                $this->assertArrayHasKey('lastclock', $item);
+                $this->assertArrayHasKey('prevvalue', $item);
+            }
+        }
+    }
 }
