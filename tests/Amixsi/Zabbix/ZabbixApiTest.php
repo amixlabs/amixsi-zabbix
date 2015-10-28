@@ -190,6 +190,10 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
                     'triggerid' => $triggerDownEvents->triggerid,
                     'hosts' => $triggerDownEvents->hosts
                 ), true);
+                $host = $triggerDownEvents->hosts[0];
+                if ($host->name == 'CKS000SVLNX') {
+                    var_dump($downEvent);
+                }
                 $eventDump = print_r((array)$downEvent, true);
                 $this->assertGreaterThan(0, $downEvent->elapsed, "Trigger: $triggerDump Event: $eventDump");
             }
