@@ -154,4 +154,33 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
             }
         }
     }
+
+    public function testTriggersSearch()
+    {
+        $triggers = $this->api->triggersSearch(array(
+            'group' => 'Linux Servers',
+            'trigger' => '001.296-C'
+        ));
+        $this->assertGreaterThan(0, $triggers);
+        foreach ($triggers as $trigger) {
+            $this->assertObjectHasAttribute('triggerid', $trigger);
+            $this->assertObjectHasAttribute('description', $trigger);
+            $this->assertObjectHasAttribute('hosts', $trigger);
+        }
+    }
+
+    public function testDownEventsByTriggers()
+    {
+        $triggers = array((object)array('triggerid' => '83880'));
+        $triggersDownEvents = $this->api->downEventsByTriggers($triggers);
+        $this->assertGreaterThan(0, $triggersDownEvents);
+        $triggerDownEvents = $triggersDownEvents[0];
+        $this->assertObjectHasAttribute('triggerid', $triggerDownEvents);
+        $this->assertObjectHasAttribute('downEvents', $triggerDownEvents);
+        $downEvents = $triggerDownEvents->downEvents;
+        $this->assertGreaterThan(0, $downEvents);
+        $downEvent = $downEvents[0];
+        $this->assertObjectHasAttribute('clock', $downEvent);
+        $this->assertObjectHasAttribute('elapsed', $downEvent);
+    }
 }

@@ -624,4 +624,89 @@ class ZabbixApi extends \ZabbixApi
         $groups = Util::normalizeGroupItems($items);
         return $groups;
     }
+
+    protected function groupidsSearch($name)
+    {
+        $groups = $this->hostgroupGet(array(
+            'output' => array('groupid'),
+            'monitored_hosts' => true,
+            'with_triggers' => true,
+            'search' => array('name' => $name)
+        ));
+        return array_map(function ($group) {
+            return $group->groupid;
+        }, $groups);
+    }
+
+    public function triggersSearch(array $params)
+    {
+        $params2 = array(
+            'output' => array('triggerid', 'description'),
+            'monitored' => true,
+            'selectHosts' => array('name')
+        );
+        if (isset($params['group'])) {
+            $params2['groupids'] = $this->groupidsSearch($params['group']);
+        }
+        if (isset($params['trigger'])) {
+            $params2['search'] = array('description' => $params['trigger']);
+        }
+        return $this->triggerGet($params2);
+    }
+
+    public function downEventsByTriggers($triggers)
+    {
+        $api = $this;
+        $logger = $this->logger;
+        $triggerIds = array_map(function ($trigger) {
+            return $trigger->triggerid;
+        }, $triggers);
+
+        if ($logger != null) {
+            $logger->info('Zabbix get events by triggerids');
+        }
+        $events = $this->eventGet(array(
+            'triggerids' => $triggerIds,
+            'output' => 'extend',
+            'object' => 0,
+            'source' => 0,
+            'sortfield' => 'eventid'
+        ));
+
+        if ($logger != null) {
+            $logger->debug('Calculating availability');
+        }
+        $triggers = array_map(function ($trigger) use ($events, $api) {
+            $triggerEvents = array_filter($events, function ($event) use ($trigger) {
+                return $event->objectid == $trigger->triggerid;
+            });
+            $trigger = clone $trigger;
+            $trigger->downEvents = $api->calculateDownEvents($triggerEvents);
+            $trigger->events = $triggerEvents;
+            return $trigger;
+        }, $triggers);
+        if ($logger != null) {
+            $logger->debug('Down events calculated');
+        }
+        return $triggers;
+    }
+
+    public function calculateDownEvents($events)
+    {
+        $until = new \DateTime();
+        $downs = array();
+        $lastEvent = current($events);
+        while ($event = next($events)) {
+            if ($event->value == '0') {
+                $lastEvent->elapsed = $event->clock - $lastEvent->clock;
+                $downs[] = $lastEvent;
+            }
+            $lastEvent = $event;
+        }
+        if ($lastEvent->value == '1') {
+            $lastEvent->elapsed = $until->getTimestamp() - $lastEvent->clock;
+            $downs[] = $lastEvent;
+        }
+        return $downs;
+    }
 }
