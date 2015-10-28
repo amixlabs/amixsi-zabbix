@@ -697,7 +697,7 @@ class ZabbixApi extends \ZabbixApi
         $downs = array();
         $lastEvent = current($events);
         while ($event = next($events)) {
-            if ($lastEvent->value == '1' && $event->value == '0') {
+            if ($lastEvent->value == '1') {
                 $lastEvent->elapsed = $event->clock - $lastEvent->clock;
                 $downs[] = $lastEvent;
             }
