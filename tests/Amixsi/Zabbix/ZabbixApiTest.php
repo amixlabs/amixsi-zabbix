@@ -184,18 +184,16 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
             $downEvents = $triggerDownEvents->downEvents;
             $this->assertGreaterThan(0, $downEvents);
             foreach ($downEvents as $downEvent) {
+                $traceData = var_export(array(
+                    'triggerid' => $triggerDownEvents->triggerid,
+                    'hosts' => $triggerDownEvents->hosts,
+                    'downEvent' => (array)$downEvent
+                ), true);
+                $this->assertObjectHasAttribute('value', $downEvent);
                 $this->assertObjectHasAttribute('clock', $downEvent);
                 $this->assertObjectHasAttribute('elapsed', $downEvent);
-                $triggerDump = print_r(array(
-                    'triggerid' => $triggerDownEvents->triggerid,
-                    'hosts' => $triggerDownEvents->hosts
-                ), true);
-                $host = $triggerDownEvents->hosts[0];
-                if ($host->name == 'CKS000SVLNX') {
-                    var_dump($downEvent);
-                }
-                $eventDump = print_r((array)$downEvent, true);
-                $this->assertGreaterThan(0, $downEvent->elapsed, "Trigger: $triggerDump Event: $eventDump");
+                $this->assertEquals('1', $downEvent->value, 'Wrong downEvent->value. '.$traceData);
+                $this->assertGreaterThan(0, $downEvent->elapsed, 'Wrong downEvent->elapsed. '.$traceData);
             }
         }
     }
