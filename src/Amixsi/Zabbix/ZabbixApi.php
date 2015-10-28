@@ -670,7 +670,7 @@ class ZabbixApi extends \ZabbixApi
             'output' => 'extend',
             'object' => 0,
             'source' => 0,
-            'sortfield' => 'clock'
+            'sortfield' => 'eventid'
         ));
 
         if ($logger != null) {
@@ -698,7 +698,8 @@ class ZabbixApi extends \ZabbixApi
         $lastEvent = current($events);
         while ($event = next($events)) {
             if ($lastEvent->value == '1') {
-                $lastEvent->elapsed = $event->clock - $lastEvent->clock;
+                $lastEvent->elapsed = abs($event->clock - $lastEvent->clock);
+                $lastEvent->event = $event;
                 $downs[] = $lastEvent;
             }
             $lastEvent = $event;
