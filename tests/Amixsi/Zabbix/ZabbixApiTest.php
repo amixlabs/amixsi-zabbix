@@ -171,16 +171,28 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
 
     public function testDownEventsByTriggers()
     {
-        $triggers = array((object)array('triggerid' => '83880'));
+        //$triggers = array((object)array('triggerid' => '83880'));
+        $triggers = $this->api->triggersSearch(array(
+            'group' => 'Linux Servers',
+            'trigger' => '001.296-C'
+        ));
         $triggersDownEvents = $this->api->downEventsByTriggers($triggers);
         $this->assertGreaterThan(0, $triggersDownEvents);
-        $triggerDownEvents = $triggersDownEvents[0];
-        $this->assertObjectHasAttribute('triggerid', $triggerDownEvents);
-        $this->assertObjectHasAttribute('downEvents', $triggerDownEvents);
-        $downEvents = $triggerDownEvents->downEvents;
-        $this->assertGreaterThan(0, $downEvents);
-        $downEvent = $downEvents[0];
-        $this->assertObjectHasAttribute('clock', $downEvent);
-        $this->assertObjectHasAttribute('elapsed', $downEvent);
+        foreach ($triggersDownEvents as $triggerDownEvents) {
+            $this->assertObjectHasAttribute('triggerid', $triggerDownEvents);
+            $this->assertObjectHasAttribute('downEvents', $triggerDownEvents);
+            $downEvents = $triggerDownEvents->downEvents;
+            $this->assertGreaterThan(0, $downEvents);
+            foreach ($downEvents as $downEvent) {
+                $this->assertObjectHasAttribute('clock', $downEvent);
+                $this->assertObjectHasAttribute('elapsed', $downEvent);
+                $triggerDump = print_r(array(
+                    'triggerid' => $triggerDownEvents->triggerid,
+                    'hosts' => $triggerDownEvents->hosts
+                ), true);
+                $eventDump = print_r((array)$downEvent, true);
+                $this->assertGreaterThan(0, $downEvent->elapsed, "Trigger: $triggerDump Event: $eventDump");
+            }
+        }
     }
 }

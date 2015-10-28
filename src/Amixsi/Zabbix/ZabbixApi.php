@@ -670,7 +670,7 @@ class ZabbixApi extends \ZabbixApi
             'output' => 'extend',
             'object' => 0,
             'source' => 0,
-            'sortfield' => 'eventid'
+            'sortfield' => 'clock'
         ));
 
         if ($logger != null) {
