@@ -710,4 +710,22 @@ class ZabbixApi extends \ZabbixApi
         }
         return $downs;
     }
+
+    public function historyHost($name, \DateTime $since, \DateTime $until)
+    {
+        $hosts = $this->hostGet(array(
+            'output' => array('hostid'),
+            'filter' => array('name' => $name)
+        ));
+        $hostids = array_map(function ($data) {
+            return $data->hostid;
+        }, $hosts);
+        return $this->historyGet(array(
+            'hostids' => $hostids,
+            'time_from' => $since->getTimestamp(),
+            'time_till' => $until->getTimestamp(),
+            'output' => 'extend',
+            'sortfield' => 'clock'
+        ));
+    }
 }

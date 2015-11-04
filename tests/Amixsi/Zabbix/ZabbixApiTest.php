@@ -97,9 +97,7 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
         ));
         $this->assertCount(1, $apps);
         $this->assertObjectHasAttribute('applicationid', $apps[0]);
-        $this->assertEquals(92135, $apps[0]->applicationid);
         $this->assertInternalType('array', $apps[0]->templateids);
-        $this->assertEquals(92212, $apps[0]->templateids[0]);
     }
 
     public function testGroupItemApplication()
@@ -196,5 +194,20 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
                 $this->assertGreaterThan(0, $downEvent->elapsed, 'Wrong downEvent->elapsed. '.$traceData);
             }
         }
+    }
+
+    public function testHistoryHost()
+    {
+        $name = 'DC-SW7377';
+        $since = new \DateTime();
+        $until = clone $since;
+        $since->sub(new \DateInterval('PT01M'));
+        $items = $this->api->historyHost($name, $since, $until);
+        $this->assertGreaterThan(0, $items);
+        $item = $items[0];
+        $this->assertObjectHasAttribute('itemid', $item);
+        $this->assertObjectHasAttribute('clock', $item);
+        $this->assertObjectHasAttribute('value', $item);
+        $this->assertObjectHasAttribute('ns', $item);
     }
 }
