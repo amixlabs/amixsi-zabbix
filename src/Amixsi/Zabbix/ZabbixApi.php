@@ -728,4 +728,70 @@ class ZabbixApi extends \ZabbixApi
             'sortfield' => 'clock'
         ));
     }
+
+    public function coreHost($servers)
+    {
+        $cores = array();
+
+        foreach ($servers as $server) {
+            $optGroup = array(
+                'output' => array('groupid', 'name'),
+                'monitored_hosts' => true,
+                'filter' => array('name' => $server)
+            );
+            $group = $this->hostgroupGet($optGroup);
+
+            if ($server == 'PRD-VCENTER-HOSTS-DC') {
+                $itemSearch = 'check_vcenter.sh[{$VC_IP},{HOST.HOST},h.cpucore]';
+            }
+            else $itemSearch = 'system.uname';
+
+            $optItem = array(
+                'output'=>array('name','key_','lastvalue'),
+                'groupids'=>$group[0]->groupid,
+                'selectHosts'=>array('hostid','host','name'),
+                'filter'=>array('key_'=>$itemSearch),
+            );
+            $hosts = $this->itemGet($optItem);
+        
+            $itemHost = array(); 
+            foreach ($hosts as $host) {
+                $itens = array(
+                    array(
+                        'key'=>$host->key_,
+                        'key_desc'=>$host->name,
+                        'value'=>$host->lastvalue
+                    )
+                );
+
+                if ($server != 'PRD-VCENTER-HOSTS-DC') {
+                    $optItem2 = array(
+                        'output'=>array('name','key_','lastvalue'),
+                        'hostids'=>$host->hosts[0]->hostid,
+                        'search'=>array('key_'=>'system.cpu.num'),
+                    );
+                    $item2 = $this->itemGet($optItem2);
+
+                    array_push($itens, 
+                        array(
+                            'key'=>$item2[0]->key_,
+                            'key_desc'=>$item2[0]->name,
+                            'value'=>$item2[0]->lastvalue
+                        )
+                    );
+                }
+
+                $itemHost[] = array(
+                    'hostid'=>$host->hosts[0]->hostid,
+                    'host'=>$host->hosts[0]->host,
+                    'name'=>$host->hosts[0]->name,
+                    'itens'=>$itens
+                );
+            }
+
+            $cores[] = array('groupid'=>$group[0]->groupid, 'name'=>$group[0]->name, 'hosts'=>$itemHost);
+        }
+        
+        return $cores;
+    }
 }
