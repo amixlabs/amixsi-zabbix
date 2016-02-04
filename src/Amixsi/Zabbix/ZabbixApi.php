@@ -476,20 +476,54 @@ class ZabbixApi extends \ZabbixApi
         return $triggers;
     }
 
-    public function triggersByHostgroup($name)
+    public function triggersByHost($name, $filter = array())
     {
         $logger = $this->logger;
 
-        $filter = array('name' => $name);
+        $hostFilter = array('name' => $name);
 
         if ($logger != null) {
-            $logger->info('Zabbix get hostgroup for "{name}"', $filter);
+            $logger->info('Zabbix get host for "{name}"', $hostFilter);
+        }
+        $hosts = $this->hostGet(array(
+            'output' => array('hostid', 'name'),
+            'monitored_hosts' => true,
+            'with_triggers' => true,
+            'filter' => $hostFilter
+        ));
+
+        $hostIds = array_map(function ($host) {
+            return $host->hostid;
+        }, $hosts);
+
+
+        return $this->triggerGet(array(
+            'output' => array('triggerid', 'description', 'expression', 'value'),
+            'expandDescription' => true,
+            'expandData' => true,
+            'monitored' => true,
+            'selectHosts' => 'extend',
+            'filter' => $filter,
+            'groupids' => null,
+            'hostids' => $hostIds,
+            'limit' => 25000
+        ));
+    }
+
+    public function triggersByHostgroup($name, $filter = array())
+    {
+        $logger = $this->logger;
+
+        $hostgroupFilter = array('name' => $name);
+
+        if ($logger != null) {
+            $logger->info('Zabbix get hostgroup for "{name}"', $hostgroupFilter);
         }
         $groups = $this->hostgroupGet(array(
             'output' => array('groupid', 'name'),
             'monitored_hosts' => true,
             'with_triggers' => true,
-            'filter' => $filter
+            'filter' => $hostgroupFilter
         ));
 
         $groupIds = array_map(function ($group) {
@@ -503,7 +537,7 @@ class ZabbixApi extends \ZabbixApi
             'expandData' => true,
             'monitored' => true,
             'selectHosts' => 'extend',
-            'filter' => array(),
+            'filter' => $filter,
             'groupids' => $groupIds,
             'hostids' => null,
             'limit' => 25000
