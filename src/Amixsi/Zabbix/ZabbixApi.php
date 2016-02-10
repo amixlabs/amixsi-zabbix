@@ -484,7 +484,7 @@ class ZabbixApi extends \ZabbixApi
 
         if ($logger != null) {
             $logger->info('Zabbix get host for "{name}"', array(
-                'name' => implode(', ', (array)$hostFilter)
+                'name' => implode(', ', (array)$name)
             ));
         }
         $hosts = $this->hostGet(array(
@@ -520,7 +520,7 @@ class ZabbixApi extends \ZabbixApi
 
         if ($logger != null) {
             $logger->info('Zabbix get hostgroup for "{name}"', array(
-                'name' => implode(', ', (array)$hostgroupFilter)
+                'name' => implode(', ', (array)$name)
             ));
         }
         $groups = $this->hostgroupGet(array(
