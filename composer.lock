@@ -4,16 +4,16 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "7e3217c87fae90e1003bd096d4a0bcef",
-    "content-hash": "f868fcdee0d702e53f3994de948a5a76",
+    "hash": "1859fe9c5b88a85af825af3fc84e82f8",
+    "content-hash": "80923ef2ede5cfa78ab106262083c881",
     "packages": [
         {
             "name": "amixsi/helper",
-            "version": "dev-master",
+            "version": "1.0.0",
             "source": {
                 "type": "git",
                 "url": "amsxp02:/Work/prj/amixsi-helper.git",
-                "reference": "0b2f9d5f23693bddabbe3935817f38dd24c005a9"
+                "reference": "081c2d3044056a3a96fcd3af74d1e764c8fbe62f"
             },
             "require-dev": {
                 "phpunit/phpunit": "~4.8"
@@ -35,7 +35,7 @@
                     "email": "dinho.abreu@gmail.com"
                 }
             ],
-            "time": "2015-10-26 17:36:43"
+            "time": "2016-02-12 18:19:01"
         },
         {
             "name": "php-zabbix-api/zabbix-api",
@@ -610,16 +610,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "4.8.22",
+            "version": "4.8.23",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "dfb11aa5236376b4fc63853cf746af39fe780e72"
+                "reference": "6e351261f9cd33daf205a131a1ba61c6d33bd483"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/dfb11aa5236376b4fc63853cf746af39fe780e72",
-                "reference": "dfb11aa5236376b4fc63853cf746af39fe780e72",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/6e351261f9cd33daf205a131a1ba61c6d33bd483",
+                "reference": "6e351261f9cd33daf205a131a1ba61c6d33bd483",
                 "shasum": ""
             },
             "require": {
@@ -678,7 +678,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2016-02-02 09:01:21"
+            "time": "2016-02-11 14:56:33"
         },
         {
             "name": "phpunit/phpunit-mock-objects",
@@ -1160,7 +1160,6 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "amixsi/helper": 20,
         "php-zabbix-api/zabbix-api": 20
     },
     "prefer-stable": false,

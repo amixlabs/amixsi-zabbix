@@ -9,7 +9,7 @@
     "require": {
         "symfony/console": "2.5.x",
         "psr/log": "~1.0",
-        "amixsi/helper": "dev-master",
+        "amixsi/helper": "~1.0",
         "php-zabbix-api/zabbix-api": "dev-master",
         "rych/bytesize": "^1.0"
     },
