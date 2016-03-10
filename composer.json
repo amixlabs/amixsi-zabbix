@@ -8,6 +8,7 @@
             "email": "edison@amixsi.com.br"
         }
     ],
+    "description": "API Zabbix with Amix",
     "require": {
         "php": ">=5.4",
         "symfony/console": "2.5.x",
