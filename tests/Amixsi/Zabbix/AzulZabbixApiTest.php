@@ -12,7 +12,7 @@ class AzulZabbixApiTest extends \PHPUnit_Framework_TestCase
     {
         $apiUrl = 'http://10.0.100.55/zabbix/api_jsonrpc.php';
         $user = 'amix.reports';
-        $password = 'gL3XruBP';
+        $password = getenv('AMIX_REPORTS_PASS');
         $this->api = new ZabbixApi($apiUrl, $user, $password);
     }
 
@@ -98,6 +98,6 @@ class AzulZabbixApiTest extends \PHPUnit_Framework_TestCase
         $this->assertObjectHasAttribute('events', $current);
         $this->assertObjectHasAttribute('availability', $current);
         $this->assertInternalType('array', $current->events);
-        $this->assertCount(238, $triggers);
+        $this->assertCount(237, $triggers);
     }
 }

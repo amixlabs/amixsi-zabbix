@@ -12,7 +12,7 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
     {
         $apiUrl = 'http://10.4.170.246/zabbix/api_jsonrpc.php';
         $user = 'amix';
-        $password = 'rootroot';
+        $password = getenv('AMIX_PASS');
         $this->api = new ZabbixApi($apiUrl, $user, $password);
     }
 

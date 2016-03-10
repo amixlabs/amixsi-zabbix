@@ -5,7 +5,7 @@ namespace Amixsi\Zabbix;
 use Psr\Log\LoggerInterface;
 use Amixsi\Helper\DateRange;
 
-class ZabbixApi extends \ZabbixApi
+class ZabbixApi extends \ZabbixApi\ZabbixApi
 {
     private $logger = null;
 
@@ -742,7 +742,7 @@ class ZabbixApi extends \ZabbixApi
             }
             $lastEvent = $event;
         }
-        if ($lastEvent->value == '1') {
+        if ($lastEvent && $lastEvent->value == '1') {
             $lastEvent->elapsed = $until->getTimestamp() - $lastEvent->clock;
             $downs[] = $lastEvent;
         }
