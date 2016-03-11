@@ -201,7 +201,7 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
         $name = 'DC-SW7377';
         $since = new \DateTime();
         $until = clone $since;
-        $since->sub(new \DateInterval('PT01M'));
+        $since->sub(new \DateInterval('PT10M'));
         $items = $this->api->historyHost($name, $since, $until);
         $this->assertGreaterThan(0, $items);
         $item = $items[0];
