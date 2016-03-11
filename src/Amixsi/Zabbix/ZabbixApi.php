@@ -832,4 +832,38 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         
         return $cores;
     }
+
+    public function maintenanceList()
+    {
+        return $this->maintenanceGet(array(
+            'output' => 'extend',
+            'selectGroups' => 'extend',
+            'selectHosts' => 'extend',
+            'selectTimeperiods' => 'extend'
+        ));
+    }
+
+    public function maintenanceUpdate($item)
+    {
+        $groupids = array_map(function ($group) {
+            return $group->groupid;
+        }, $item->groups);
+        $hostids = array_map(function ($host) {
+            return $host->hostid;
+        }, $item->hosts);
+        $timeperiods = array_map(function ($timeperiod) {
+            unset($timeperiod->timeperiodid);
+            return $timeperiod;
+        }, $item->timeperiods);
+        if (count($groupids)) {
+            $item->groupids = $groupids;
+        }
+        if (count($hostids)) {
+            $item->hostids = $hostids;
+        }
+        unset($item->groups);
+        unset($item->hosts);
+        $item->timeperiods = $timeperiods;
+        return parent::maintenanceUpdate((array)$item);
+    }
 }
