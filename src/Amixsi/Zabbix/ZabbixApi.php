@@ -781,8 +781,9 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
 
             if ($server == 'PRD-VCENTER-HOSTS-DC') {
                 $itemSearch = 'check_vcenter.sh[{$VC_IP},{HOST.HOST},h.cpucore]';
+            } else {
+                $itemSearch = 'system.uname';
             }
-            else $itemSearch = 'system.uname';
 
             $optItem = array(
                 'output'=>array('name','key_','lastvalue'),
@@ -791,8 +792,8 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
                 'filter'=>array('key_'=>$itemSearch),
             );
             $hosts = $this->itemGet($optItem);
-        
-            $itemHost = array(); 
+
+            $itemHost = array();
             foreach ($hosts as $host) {
                 $itens = array(
                     array(
@@ -810,7 +811,8 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
                     );
                     $item2 = $this->itemGet($optItem2);
 
-                    array_push($itens, 
+                    array_push(
+                        $itens,
                         array(
                             'key'=>$item2[0]->key_,
                             'key_desc'=>$item2[0]->name,
@@ -829,18 +831,22 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
 
             $cores[] = array('groupid'=>$group[0]->groupid, 'name'=>$group[0]->name, 'hosts'=>$itemHost);
         }
-        
+
         return $cores;
     }
 
-    public function maintenanceList()
+    public function maintenanceList($filter = null)
     {
-        return $this->maintenanceGet(array(
+        $options = array(
             'output' => 'extend',
             'selectGroups' => 'extend',
             'selectHosts' => 'extend',
             'selectTimeperiods' => 'extend'
-        ));
+        );
+        if ($filter != null) {
+            $options['filter'] = (array)$filter;
+        }
+        return $this->maintenanceGet($options);
     }
 
     public function maintenanceUpdate($item)

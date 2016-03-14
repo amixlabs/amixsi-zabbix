@@ -52,6 +52,26 @@ class MaintenanceApiTest extends \PHPUnit_Framework_TestCase
         $this->assertInternalType('array', $item->timeperiods);
     }
 
+    public function testListMaintenanceWithFilter()
+    {
+        $api = $this->api;
+        $list = $api->maintenanceList(array('maintenanceid' => 33));
+        $this->assertEquals(1, count($list));
+        $item = $list[0];
+        $this->assertObjectHasAttribute('maintenanceid', $item);
+        $this->assertObjectHasAttribute('name', $item);
+        $this->assertObjectHasAttribute('maintenance_type', $item);
+        $this->assertObjectHasAttribute('description', $item);
+        $this->assertObjectHasAttribute('active_since', $item);
+        $this->assertObjectHasAttribute('active_till', $item);
+        $this->assertObjectHasAttribute('groups', $item);
+        $this->assertObjectHasAttribute('hosts', $item);
+        $this->assertObjectHasAttribute('timeperiods', $item);
+        $this->assertInternalType('array', $item->groups);
+        $this->assertInternalType('array', $item->hosts);
+        $this->assertInternalType('array', $item->timeperiods);
+    }
+
     public function testCreateMaintenance()
     {
         $this->setupRemoveMaintenanceItemTest();
