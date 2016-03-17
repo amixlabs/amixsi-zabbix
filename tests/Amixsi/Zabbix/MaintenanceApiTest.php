@@ -116,4 +116,22 @@ class MaintenanceApiTest extends \PHPUnit_Framework_TestCase
         $itemUpdated = $api->maintenanceUpdate($item);
         $this->assertObjectHasAttribute('maintenanceids', $itemUpdated);
     }
+
+    /**
+     * @depends testCreateMaintenance
+     */
+    public function testUpdateMaintenanceArray()
+    {
+        $api = $this->api;
+        $list = $api->maintenanceList();
+        $list = array_filter($list, function ($item) {
+            return $item->name == 'Teste via API';
+        });
+        $item = current($list);
+        $item = json_decode(json_encode($item), true);
+        $active_till = new \DateTime('tomorrow');
+        $item['active_till'] = $active_till->getTimestamp();
+        $itemUpdated = $api->maintenanceUpdate($item);
+        $this->assertObjectHasAttribute('maintenanceids', $itemUpdated);
+    }
 }

@@ -849,27 +849,31 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return $this->maintenanceGet($options);
     }
 
-    public function maintenanceUpdate($item)
+    public function maintenanceUpdate($params = array(), $arrayKeyProperty = '')
     {
+        $item = (array)$params;
         $groupids = array_map(function ($group) {
-            return $group->groupid;
-        }, $item->groups);
+            $group = (array)$group;
+            return $group['groupid'];
+        }, $item['groups']);
         $hostids = array_map(function ($host) {
-            return $host->hostid;
-        }, $item->hosts);
+            $host = (array)$host;
+            return $host['hostid'];
+        }, $item['hosts']);
         $timeperiods = array_map(function ($timeperiod) {
-            unset($timeperiod->timeperiodid);
+            $timeperiod = (array)$timeperiod;
+            unset($timeperiod['timeperiodid']);
             return $timeperiod;
-        }, $item->timeperiods);
+        }, $item['timeperiods']);
         if (count($groupids)) {
-            $item->groupids = $groupids;
+            $item['groupids'] = $groupids;
         }
         if (count($hostids)) {
-            $item->hostids = $hostids;
+            $item['hostids'] = $hostids;
         }
-        unset($item->groups);
-        unset($item->hosts);
-        $item->timeperiods = $timeperiods;
-        return parent::maintenanceUpdate((array)$item);
+        unset($item['groups']);
+        unset($item['hosts']);
+        $item['timeperiods'] = $timeperiods;
+        return parent::maintenanceUpdate($item, $arrayKeyProperty);
     }
 }
