@@ -79,14 +79,21 @@ class MaintenanceApiTest extends \PHPUnit_Framework_TestCase
         $hosts = $api->hostGet(array(
             'filter' => array('name' => 'PRD-ZABBIX-FK')
         ));
+        $groups = $api->hostgroupGet(array(
+            'filter' => array('name' => 'PRD-ZABBIX-FK')
+        ));
         $hostids = array_map(function ($host) {
             return $host->hostid;
         }, $hosts);
+        $groupids = array_map(function ($group) {
+            return $group->groupid;
+        }, $groups);
         $item = $api->maintenanceCreate(array(
             'name' => 'Teste via API',
             'active_since' => '1358844540',
             'active_till' => '1390466940',
             'hostids' => $hostids,
+            'groupids' => $groupids,
             'timeperiods' => array(
                 array(
                     'timeperiod_type' => 3,
@@ -106,15 +113,30 @@ class MaintenanceApiTest extends \PHPUnit_Framework_TestCase
     public function testUpdateMaintenance()
     {
         $api = $this->api;
-        $list = $api->maintenanceList();
-        $list = array_filter($list, function ($item) {
-            return $item->name == 'Teste via API';
-        });
+        $list = $api->maintenanceList(array(
+            'name' => 'Teste via API'
+        ));
         $item = current($list);
+        $id = $item->maintenanceid;
         $active_till = new \DateTime('tomorrow');
-        $item->active_till = $active_till->getTimestamp();
+        $item->active_till = (string)$active_till->getTimestamp();
+        $item->groups = array();
         $itemUpdated = $api->maintenanceUpdate($item);
+        $list = $api->maintenanceList(array(
+            'maintenanceid' => $id
+        ));
+        foreach ($item->timeperiods as $timeperiod) {
+            unset($timeperiod->timeperiodid);
+        }
+        $expectedJson = json_encode($item, JSON_PRETTY_PRINT);
+        $item = current($list);
+        foreach ($item->timeperiods as $timeperiod) {
+            unset($timeperiod->timeperiodid);
+        }
+        $json = json_encode($item, JSON_PRETTY_PRINT);
         $this->assertObjectHasAttribute('maintenanceids', $itemUpdated);
+        $this->assertContains($id, $itemUpdated->maintenanceids);
+        $this->assertEquals($expectedJson, $json);
     }
 
     /**

@@ -865,12 +865,8 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             unset($timeperiod['timeperiodid']);
             return $timeperiod;
         }, $item['timeperiods']);
-        if (count($groupids)) {
-            $item['groupids'] = $groupids;
-        }
-        if (count($hostids)) {
-            $item['hostids'] = $hostids;
-        }
+        $item['groupids'] = $groupids;
+        $item['hostids'] = $hostids;
         unset($item['groups']);
         unset($item['hosts']);
         $item['timeperiods'] = $timeperiods;
