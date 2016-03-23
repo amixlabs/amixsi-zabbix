@@ -77,23 +77,19 @@ class MaintenanceApiTest extends \PHPUnit_Framework_TestCase
         $this->setupRemoveMaintenanceItemTest();
         $api = $this->api;
         $hosts = $api->hostGet(array(
+            'output' => array('hostid', 'name'),
             'filter' => array('name' => 'PRD-ZABBIX-FK')
         ));
         $groups = $api->hostgroupGet(array(
+            'output' => array('groupid', 'name'),
             'filter' => array('name' => 'PRD-ZABBIX-FK')
         ));
-        $hostids = array_map(function ($host) {
-            return $host->hostid;
-        }, $hosts);
-        $groupids = array_map(function ($group) {
-            return $group->groupid;
-        }, $groups);
         $item = $api->maintenanceCreate(array(
             'name' => 'Teste via API',
             'active_since' => '1358844540',
             'active_till' => '1390466940',
-            'hostids' => $hostids,
-            'groupids' => $groupids,
+            'hosts' => $hosts,
+            'groups' => $groups,
             'timeperiods' => array(
                 array(
                     'timeperiod_type' => 3,

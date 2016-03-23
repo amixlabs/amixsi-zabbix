@@ -849,7 +849,19 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return $this->maintenanceGet($options);
     }
 
+    public function maintenanceCreate($params = array(), $arrayKeyProperty = '')
+    {
+        $item = $this->normalizeMaintenanceData($params);
+        return parent::maintenanceCreate($item, $arrayKeyProperty);
+    }
+
     public function maintenanceUpdate($params = array(), $arrayKeyProperty = '')
+    {
+        $item = $this->normalizeMaintenanceData($params);
+        return parent::maintenanceUpdate($item, $arrayKeyProperty);
+    }
+
+    private function normalizeMaintenanceData($params)
     {
         $item = (array)$params;
         $groupids = array_map(function ($group) {
@@ -870,6 +882,6 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         unset($item['groups']);
         unset($item['hosts']);
         $item['timeperiods'] = $timeperiods;
-        return parent::maintenanceUpdate($item, $arrayKeyProperty);
+        return $item;
     }
 }
