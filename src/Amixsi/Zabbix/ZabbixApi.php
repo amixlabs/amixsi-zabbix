@@ -216,6 +216,98 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return $triggers;
     }
 
+    public function eventsByTriggers($triggers, \DateTime $since, \DateTime $until)
+    {
+        $api = $this;
+        $logger = $this->logger;
+        $triggerIds = array_map(function ($trigger) {
+            return $trigger->triggerid;
+        }, $triggers);
+
+        if ($logger != null) {
+            $info = array(
+                'since' => $since->format('d/m/Y H:i:s'),
+                'until' => $until->format('d/m/Y H:i:s')
+            );
+            $logger->info('Zabbix get events [{since}, {until}]', $info);
+        }
+        $events = $this->eventGet(array(
+            'triggerids' => $triggerIds,
+            'time_from' => $since->getTimestamp(),
+            'time_till' => $until->getTimestamp(),
+            'output' => 'extend',
+            'object' => 0,
+            'source' => 0,
+            'sortfield' => 'eventid'
+        ));
+
+        if ($logger != null) {
+            $logger->debug('Grouping events by trigger');
+        }
+        $triggers = array_map(function ($trigger) use ($events, $api) {
+            $triggerEvents = array_filter($events, function ($event) use ($trigger) {
+                return $event->objectid == $trigger->triggerid;
+            });
+            $trigger = clone $trigger;
+            $trigger->events = $triggerEvents;
+            return $trigger;
+        }, $triggers);
+        if ($logger != null) {
+            $logger->debug('Events Grouped');
+        }
+        return $triggers;
+    }
+
+    protected function filterEventsByDurationGreaterThen($events, $since, $until, $secs)
+    {
+        $filteredEvents = array();
+        $elapsed = 0;
+        $event = current($events);
+
+        if ($event && $event->value == '0') {
+            $previousEvents = $this->eventGet(array(
+                'triggerids' => array($event->objectid),
+                'eventid_till' => $event->eventid,
+                'output' => array('eventid', 'value'),
+                'object' => 0,
+                'source' => 0,
+                'limit' => 3
+            ));
+            $previousEvents = array_filter($previousEvents, function ($event) {
+                return $event->value == '1';
+            });
+            //var_dump($previousEvents);
+            // we know if the last event was a problem
+            if (count($previousEvents) > 0) {
+                $lastEvent = end($previousEvents);
+                $elapsed = $event->clock - $since->getTimestamp();
+                if ($elapsed >= $secs) {
+                    $lastEvent->duration = $elapsed;
+                    $filteredEvents[] = $lastEvent;
+                }
+            }
+        }
+        $lastEvent = clone $event;
+        while ($event = next($events)) {
+            if ($event->value == '0') {
+                $elapsed = $event->clock - $lastEvent->clock;
+                if ($elapsed >= $secs) {
+                    $lastEvent->duration = $elapsed;
+                    $filteredEvents[] = $lastEvent;
+                }
+            }
+            $lastEvent = clone $event;
+        }
+        if ($lastEvent->value == '1') {
+            $elapsed = $until->getTimestamp() - $lastEvent->clock;
+            if ($elapsed >= $secs) {
+                $lastEvent->duration = $elapsed;
+                $filteredEvents[] = $lastEvent;
+            }
+        }
+        return $filteredEvents;
+    }
+
     public function routerReportGet(\DateTime $since, \DateTime $until, $availability = .95)
     {
         $logger = $this->logger;
@@ -689,6 +781,9 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         if (isset($params['trigger'])) {
             $params2['search'] = array('description' => $params['trigger']);
         }
+        if (isset($params['expandDescription'])) {
+            $params2['expandDescription'] = true;
+        }
         return $this->triggerGet($params2);
     }
 
@@ -883,5 +978,23 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         unset($item['hosts']);
         $item['timeperiods'] = $timeperiods;
         return $item;
+    }
+
+    public function eventDurationByTriggers($triggers, \DateTime $since, \DateTime $until, $minSeconds)
+    {
+        $api = $this;
+        $triggers = $api->eventsByTriggers($triggers, $since, $until);
+        $triggers = array_filter($triggers, function ($trigger) {
+            return count($trigger->events) > 0;
+        });
+        $triggers = array_map(function ($trigger) use ($api, $since, $until, $minSeconds) {
+            $events = $api->filterEventsByDurationGreaterThen($trigger->events, $since, $until, $minSeconds);
+            $trigger->filteredEvents = $events;
+            return $trigger;
+        }, $triggers);
+        $triggers = array_filter($triggers, function ($trigger) {
+            return count($trigger->filteredEvents) > 0;
+        });
+        return $triggers;
     }
 }
