@@ -244,12 +244,23 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         if ($logger != null) {
             $logger->debug('Grouping events by trigger');
         }
-        $triggers = array_map(function ($trigger) use ($events, $api) {
-            $triggerEvents = array_filter($events, function ($event) use ($trigger) {
-                return $event->objectid == $trigger->triggerid;
-            });
+
+        $idxEvents = array();
+        foreach ($events as $event) {
+            if (isset($idxEvents[$event->objectid])) {
+                $idxEvents[$event->objectid][] = $event;
+            } else {
+                $idxEvents[$event->objectid] = array($event);
+            }
+        }
+
+        $triggers = array_map(function ($trigger) use ($idxEvents, $api) {
             $trigger = clone $trigger;
-            $trigger->events = $triggerEvents;
+            if (isset($idxEvents[$trigger->triggerid])) {
+                $trigger->events = $idxEvents[$trigger->triggerid];
+            } else {
+                $trigger->events = array();
+            }
             return $trigger;
         }, $triggers);
         if ($logger != null) {

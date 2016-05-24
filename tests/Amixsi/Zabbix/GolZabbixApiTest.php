@@ -19,10 +19,15 @@ class GolZabbixApiTest extends \PHPUnit_Framework_TestCase
     public function testGolLinkConsumption()
     {
         $api = $this->api;
-        $triggers = $api->triggersSearch(array(
-            'trigger' => ' Consumo do link ',
+        $triggers1 = $api->triggersSearch(array(
+            'trigger' => 'Consumo do link',
             'expandDescription' => true
         ));
+        $triggers2 = $api->triggersSearch(array(
+            'trigger' => 'Trafego',
+            'expandDescription' => true
+        ));
+        $triggers = array_merge($triggers1, $triggers2);
         $since = \DateTime::createFromFormat('Y-m-d H:i:s', '2016-04-01 00:00:00');
         $until = \DateTime::createFromFormat('Y-m-d H:i:s', '2016-04-03 00:00:00');
         $triggers = $api->eventDurationByTriggers($triggers, $since, $until, 3600);
