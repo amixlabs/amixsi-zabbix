@@ -11,5 +11,5 @@ We need setup passwords for users:
 Run tests:
 
 ```
-AMIX_PASS=... AMIX_REPORTS_PASS=... AMIX_API_MAINTENANCE=... composer test
+AMIX_PASS=... AMIX_REPORTS_PASS=... AMIX_API_MAINTENANCE=... DASA_USER=... DASA_PASS=... composer test
 ```

@@ -1008,4 +1008,65 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         });
         return $triggers;
     }
+
+    protected function getHostsIndexed($output = null)
+    {
+        if ($output == null) {
+            $output = array('hostid', 'host');
+        }
+        $hosts = $this->hostGet(array(
+            'output' => $output
+        ));
+        $idxHosts = array();
+        foreach ($hosts as $host) {
+            $idxHosts[$host->host] = $host;
+        }
+        return $idxHosts;
+    }
+
+    protected function getHostGroupsIndexed($output = null)
+    {
+        if ($output == null) {
+            $output = array('groupid', 'name');
+        }
+        $groups = $this->hostgroupGet(array(
+            'output' => $output
+        ));
+        $idxGroups = array();
+        foreach ($groups as $group) {
+            $idxGroups[$group->name] = $group;
+        }
+        return $idxGroups;
+    }
+
+    public function createHostsIfNotExists($hosts)
+    {
+        $idxHosts = $this->getHostsIndexed();
+        $idxGroups = $this->getHostGroupsIndexed();
+        $insertHosts = array_filter($hosts, function ($host) use ($idxHosts) {
+            return !isset($idxHosts[$host['host']]);
+        });
+        $resultHosts = array_map(function ($host) use ($idxGroups) {
+            $exception = null;
+            $result = null;
+            try {
+                $host['groups'] = array_map(function ($groupname) use ($idxGroups) {
+                    if (!isset($idxGroups[$groupname])) {
+                        throw new Exception("Group $groupname does not exists");
+                    }
+                    $group = $idxGroups[$groupname];
+                    return array('groupid' => $group->groupid);
+                }, $host['groups']);
+                $result = $this->hostCreate($host);
+            } catch (\Exception $e) {
+                $exception = $e->getMessage();
+            }
+            return array(
+                'host' => $host,
+                'result' => $result,
+                'exception' => $exception
+            );
+        }, $insertHosts);
+        return $resultHosts;
+    }
 }
