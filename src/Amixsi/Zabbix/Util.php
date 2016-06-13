@@ -44,17 +44,13 @@ class Util
             $first = current($items);
             $group = array(
                 'hostname' => array('name' => 'hostname', 'lastvalue' => $first->hosts[0]->name),
-                'hostid' => array('name' => 'hostid', 'lastvalue' => $first->hostid)
+                'hostid' => array('name' => 'hostid', 'lastvalue' => $first->hostid),
+                'hostip' => array('name' => 'hostip', 'lastvalue' => $first->interfaces[0]->ip)
             );
             foreach ($items as $item) {
                 $name = $item->parsedName[1];
-                $group[$name] = array(
-                    'name' => $name,
-                    'lastvalue' => $item->lastvalue,
-                    'itemid' => $item->itemid,
-                    'lastclock' => $item->lastclock,
-                    'prevvalue' => $item->prevvalue
-                );
+                $group[$name] = (array)$item;
+                $group[$name]['name'] = $name;
             }
             $groups[] = $group;
             if ($commonKeys === null) {

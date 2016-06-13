@@ -763,6 +763,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
     {
         $params = array_merge($params, array(
             'selectHosts' => array('name'),
+            'selectInterfaces' => array('ip'),
             'output' => array(
                 'itemid',
                 'hostid',
@@ -786,6 +787,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         }, $items);
         $items = Util::groupItemsByParsedName($items);
         $groups = Util::normalizeGroupItems($items);
+        //var_dump($items);
         return $groups;
     }
 

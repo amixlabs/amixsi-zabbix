@@ -78,6 +78,7 @@ class DasaZabbixApiTest extends \PHPUnit_Framework_TestCase
         $expectedCommonKeys = array(
             "hostname",
             "hostid",
+            "hostip",
             "ifAdminStatus",
             "ifAlias",
             "ifDescr",
@@ -100,7 +101,7 @@ class DasaZabbixApiTest extends \PHPUnit_Framework_TestCase
             $item = $group[$key];
             $this->assertArrayHasKey('name', $item);
             $this->assertArrayHasKey('lastvalue', $item);
-            if (!in_array($key, array('hostname', 'hostid'))) {
+            if (!in_array($key, array('hostname', 'hostid', 'hostip'))) {
                 $this->assertArrayHasKey('itemid', $item);
                 $this->assertArrayHasKey('lastclock', $item);
                 $this->assertArrayHasKey('prevvalue', $item);
