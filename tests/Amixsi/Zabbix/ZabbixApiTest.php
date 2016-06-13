@@ -138,6 +138,8 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
             "child_mdisk_grp_count",
             "capacity"
         );
+        sort($expectedCommonKeys);
+        sort($commonKeys);
         $this->assertEquals($expectedCommonKeys, $commonKeys);
         $group = $groups[0];
         foreach ($commonKeys as $key) {

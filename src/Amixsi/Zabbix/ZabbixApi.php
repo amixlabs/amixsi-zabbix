@@ -5,6 +5,11 @@ namespace Amixsi\Zabbix;
 use Psr\Log\LoggerInterface;
 use Amixsi\Helper\DateRange;
 
+/**
+ * @SuppressWarnings(PHPMD.ExcessiveClassLength)
+ * @SuppressWarnings(PHPMD.TooManyMethods)
+ * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
+ */
 class ZabbixApi extends \ZabbixApi\ZabbixApi
 {
     private $logger = null;
@@ -135,6 +140,10 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return $triggers;
     }
 
+    /**
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     */
     public function availabilityByTriggers2(\DateTime $since, \DateTime $until, $priorities = null)
     {
         $api = $this;
@@ -216,6 +225,9 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return $triggers;
     }
 
+    /**
+     * @SuppressWarnings("unused")
+     */
     public function eventsByTriggers($triggers, \DateTime $since, \DateTime $until)
     {
         $api = $this;
@@ -269,6 +281,10 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return $triggers;
     }
 
+    /**
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     */
     protected function filterEventsByDurationGreaterThen($events, $since, $until, $secs)
     {
         $filteredEvents = array();
@@ -446,6 +462,9 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return $problem;
     }
 
+    /**
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     */
     public function triggerDisasterGet($limit = 0)
     {
         $priority = 5;
@@ -525,6 +544,10 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         ));
     }
 
+    /**
+     * @SuppressWarnings(PHPMD.CyclomaticComplexity)
+     * @SuppressWarnings(PHPMD.NPathComplexity)
+     */
     public function disasterReportGet(\DateTime $since, \DateTime $until, $priorities, $cacheFile = null)
     {
         $logger = $this->logger;
@@ -568,7 +591,6 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
 
     public function disasterReportGet2(\DateTime $since, \DateTime $until, $priorities)
     {
-        $logger = $this->logger;
         $triggers = $this->availabilityByTriggers2($since, $until, $priorities);
         $triggers = array_filter($triggers, function ($trigger) {
             return $trigger->availability < 1;
@@ -737,13 +759,14 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return $this->request('apiinfo.version', $params, $arrayKeyProperty, false);
     }
 
-    public function groupItemApplicationGet(array $params)
+    public function groupItemApplicationGet(array $params, $field = 'name')
     {
         $params = array_merge($params, array(
             'selectHosts' => array('name'),
             'output' => array(
                 'itemid',
                 'hostid',
+                'key_',
                 'name',
                 'value_type',
                 'units',
@@ -753,8 +776,8 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             )
         ));
         $items = $this->itemGet($params);
-        $items = array_map(function ($item) {
-            $item->parsedName = Util::parseItemKeyValue($item->name);
+        $items = array_map(function ($item) use ($field) {
+            $item->parsedName = Util::parseItemKeyValue($item->$field, $field);
             if ($item->units == 'B') {
                 $item->lastvalue = Util::byteSize($item->lastvalue);
                 $item->prevvalue = Util::byteSize($item->prevvalue);
@@ -1068,5 +1091,59 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             );
         }, $insertHosts);
         return $resultHosts;
+    }
+
+    public function itemsReportByGroupApp($group, $app, $appLimit = null)
+    {
+        $logger = $this->logger;
+
+        if ($logger != null) {
+            $logger->info('Zabbix get host groups');
+        }
+        $groups = $this->hostgroupGet(array(
+            'output' => array('groupid'),
+            'filter' => array(
+                'name' => $group
+            )
+        ));
+        $groupids = array_map(function ($group) {
+            return $group->groupid;
+        }, $groups);
+
+        if ($logger != null) {
+            $logger->info('Zabbix get applications');
+        }
+        $apps = $this->applicationGet(array(
+            'groupids' => $groupids,
+            'output' => array('applicationid'),
+            'filter' => array(
+                'name' => $app
+            ),
+            'limit' => $appLimit
+        ));
+        $appids = array_map(function ($app) {
+            return $app->applicationid;
+        }, $apps);
+
+        if ($logger != null) {
+            $logger->info('Zabbix get items');
+        }
+        return $this->groupItemApplicationGet(array(
+            'applicationids' => $appids,
+        ), 'key_');
+    }
+
+    public function mapReduceItemHistory($item, $since, $until, $functions)
+    {
+        $histories = $this->historyGet(array(
+            'itemids' => $item['itemid'],
+            'time_from' => $since->getTimestamp(),
+            'time_till' => $until->getTimestamp(),
+            'output' => 'extend'
+        ));
+        $values = array_map(function ($reduce) use ($histories, $item, $since, $until) {
+            return call_user_func($reduce, $histories, $item, $since, $until);
+        }, $functions);
+        return array_merge($item, $values);
     }
 }
