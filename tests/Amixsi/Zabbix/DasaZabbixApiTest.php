@@ -3,6 +3,10 @@
 namespace Amixsi\Zabbix;
 
 use Amixsi\Helper\ZabbixPriority;
+use Monolog\Logger;
+use Monolog\Handler\StreamHandler;
+use Monolog\Formatter\LineFormatter;
+use Monolog\Processor\PsrLogMessageProcessor;
 
 class DasaZabbixApiTest extends \PHPUnit_Framework_TestCase
 {
@@ -10,10 +14,13 @@ class DasaZabbixApiTest extends \PHPUnit_Framework_TestCase
 
     protected function setUp()
     {
+        $logger = null;
+        //$logger = new Logger('test');
+        //$logger->pushProcessor(new PsrLogMessageProcessor());
         $apiUrl = 'http://10.253.14.129/zabbix/api_jsonrpc.php';
         $user = getenv('DASA_USER');
         $password = getenv('DASA_PASS');
-        $this->api = new ZabbixApi($apiUrl, $user, $password);
+        $this->api = new ZabbixApi($apiUrl, $user, $password, $logger);
     }
 
     public function testDasaCreateHostsIfNotExists()

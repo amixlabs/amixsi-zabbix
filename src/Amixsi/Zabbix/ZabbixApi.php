@@ -1140,20 +1140,42 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         $logger = $this->logger;
         $histories = array();
         try {
+            $start = microtime(true);
             $histories = $this->historyGet(array(
                 'itemids' => $item['itemid'],
                 'time_from' => $since->getTimestamp(),
                 'time_till' => $until->getTimestamp(),
                 'output' => 'extend'
             ));
+            $elapsed = microtime(true) - $start;
+            if ($logger != null) {
+                $logger->debug('historyGet({itemid}, {count}): {elapsed}', array(
+                    'itemid' => $item['itemid'],
+                    'count' => count($histories),
+                    'elapsed' => $elapsed
+                ));
+            }
         } catch (Exception $e) {
             if ($logger != null) {
-                $logger->warning('historyGet([ "item" => '. $item['itemid'] . ' ]): ' . $e->getMessage());
+                $logger->error('historyGet({itemid}): {message}', array(
+                    'itemid' => $item['itemid'],
+                    'message' => $e->getMessage()
+                ));
             }
         }
-        $values = array_map(function ($reduce) use ($histories, $item, $since, $until) {
-            return call_user_func($reduce, $histories, $item, $since, $until);
-        }, $functions);
+        $values = array();
+        foreach ($functions as $name => $reduce) {
+            $start = microtime(true);
+            $ret = call_user_func($reduce, $histories, $item, $since, $until);
+            $elapsed = microtime(true) - $start;
+            if ($logger != null) {
+                $logger->debug('{name}: {elapsed}', array(
+                    'name' => $name,
+                    'elapsed' => $elapsed
+                ));
+            }
+            $values[$name] = $ret;
+        }
         return array_merge($item, $values);
     }
 }
