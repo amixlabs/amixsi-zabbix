@@ -1137,12 +1137,20 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
 
     public function mapReduceItemHistory($item, $since, $until, $functions)
     {
-        $histories = $this->historyGet(array(
-            'itemids' => $item['itemid'],
-            'time_from' => $since->getTimestamp(),
-            'time_till' => $until->getTimestamp(),
-            'output' => 'extend'
-        ));
+        $logger = $this->logger;
+        $histories = array();
+        try {
+            $histories = $this->historyGet(array(
+                'itemids' => $item['itemid'],
+                'time_from' => $since->getTimestamp(),
+                'time_till' => $until->getTimestamp(),
+                'output' => 'extend'
+            ));
+        } catch (Exception $e) {
+            if ($logger != null) {
+                $logger->warning('historyGet([ "item" => '. $item['itemid'] . ' ]): ' . $e->getMessage());
+            }
+        }
         $values = array_map(function ($reduce) use ($histories, $item, $since, $until) {
             return call_user_func($reduce, $histories, $item, $since, $until);
         }, $functions);
