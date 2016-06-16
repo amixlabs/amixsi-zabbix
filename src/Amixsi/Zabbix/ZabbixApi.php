@@ -1145,7 +1145,8 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
                 'itemids' => $item['itemid'],
                 'time_from' => $since->getTimestamp(),
                 'time_till' => $until->getTimestamp(),
-                'output' => 'extend'
+                'output' => 'extend',
+                'nopermissions' => true
             ));
             $elapsed = microtime(true) - $start;
             if ($logger != null) {
