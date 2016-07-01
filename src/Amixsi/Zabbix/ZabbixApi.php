@@ -1156,7 +1156,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
                     'elapsed' => $elapsed
                 ));
             }
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             if ($logger != null) {
                 $logger->error('historyGet({itemid}): {message}', array(
                     'itemid' => $item['itemid'],
