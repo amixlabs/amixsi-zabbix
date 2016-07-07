@@ -97,7 +97,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         ));
     }
 
-    public function availabilityByTriggers($triggers, \DateTime $since, \DateTime $until)
+    public function availabilityByTriggers($triggers, \DateTime $since, \DateTime $until, $detail = false, $mindur = 0)
     {
         $api = $this;
         $logger = $this->logger;
@@ -125,15 +125,33 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         if ($logger != null) {
             $logger->debug('Calculating availability');
         }
-        $triggers = array_map(function ($trigger) use ($events, $since, $until, $api) {
-            $triggerEvents = array_filter($events, function ($event) use ($trigger) {
-                return $event->objectid == $trigger->triggerid;
+        if ($detail) {
+            $events = $this->normalizeEvents($events, $since, $until);
+            $downEvents = array_filter($events, function ($event) use ($mindur) {
+                return $event->value == '1' && $event->elapsed >= $mindur;
             });
-            $trigger = clone $trigger;
-            $trigger->availability = $api->calculateAvailability($triggerEvents, $since, $until);
-            $trigger->events = $triggerEvents;
-            return $trigger;
-        }, $triggers);
+            $indexedTriggers = array();
+            foreach ($triggers as $trigger) {
+                $indexedTriggers[$trigger->triggerid] = $trigger;
+            }
+            $elapsed = $until->getTimestamp() - $since->getTimestamp();
+            $triggers = array_map(function ($downEvent) use ($indexedTriggers, $elapsed) {
+                $trigger = clone $indexedTriggers[$downEvent->objectid];
+                $trigger->availability = 1 - ($downEvent->elapsed / $elapsed);
+                $trigger->events = array($downEvent);
+                return $trigger;
+            }, $downEvents);
+        } else {
+            $triggers = array_map(function ($trigger) use ($events, $since, $until, $api) {
+                $triggerEvents = array_filter($events, function ($event) use ($trigger) {
+                    return $event->objectid == $trigger->triggerid;
+                });
+                $trigger = clone $trigger;
+                $trigger->availability = $api->calculateAvailability($triggerEvents, $since, $until);
+                $trigger->events = $triggerEvents;
+                return $trigger;
+            }, $triggers);
+        }
         if ($logger != null) {
             $logger->debug('Availability calculated');
         }
@@ -426,38 +444,62 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         }, $dates);
     }
 
-    private function problemAccount($events, \DateTime $since, \DateTime $until)
+    private function normalizeEvents($events, \DateTime $since, \DateTime $until)
     {
-        $problem = 0;
-        $event = current($events);
+        $logger = $this->logger;
+        $nEvents = array();
 
-        if ($event && $event->value == '0') {
+        if ($logger) {
+            $logger->info('Zabbix normalize {count} events', array(
+                'count' => count($events)
+            ));
+        }
+        $event = current($events);
+        if ($event) {
             $previousEvents = $this->eventGet(array(
                 'triggerids' => array($event->objectid),
-                'eventid_till' => $event->eventid,
-                'output' => array('eventid', 'value'),
+                'eventid_till' => $event->eventid - 1,
+                'output' => array('eventid', 'objectid', 'value'),
                 'object' => 0,
                 'source' => 0,
-                'limit' => 3
+                'sortfield' => 'eventid',
+                'sortorder' => 'DESC',
+                'limit' => 1
             ));
-            $previousEvents = array_filter($previousEvents, function ($event) {
-                return $event->value == '1';
-            });
-            //var_dump($previousEvents);
-            // we know if the last event was a problem
             if (count($previousEvents) > 0) {
-                $problem += $event->clock - $since->getTimestamp();
+                $lastEvent = current($previousEvents);
+                $lastEvent->eventid = null;
+                $lastEvent->clock = $since->getTimestamp();
+                $lastEvent->elapsed = $event->clock - $lastEvent->clock;
+                $nEvents[] = $lastEvent;
             }
         }
         $lastEvent = $event;
         while ($event = next($events)) {
-            if ($event->value == '0') {
-                $problem += $event->clock - $lastEvent->clock;
-            }
+            $lastEvent->elapsed = $event->clock - $lastEvent->clock;
+            $nEvents[] = $lastEvent;
             $lastEvent = $event;
         }
-        if ($lastEvent->value == '1') {
-            $problem += $until->getTimestamp() - $lastEvent->clock;
+        if ($lastEvent) {
+            $lastEvent->elapsed = $until->getTimestamp() - $lastEvent->clock;
+            $nEvents[] = $lastEvent;
+        }
+        if ($logger) {
+            $logger->info('Zabbix normalize {count} events', array(
+                'count' => count($events)
+            ));
+        }
+        return $nEvents;
+    }
+
+    private function problemAccount($events, \DateTime $since, \DateTime $until)
+    {
+        $events = $this->normalizeEvents($events, $since, $until);
+        $problem = 0;
+        foreach ($events as $event) {
+            if ($event->value == '1') {
+                $problem += $event->elapsed;
+            }
         }
         return $problem;
     }
@@ -624,17 +666,16 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         }, $hosts);
 
 
-        return $this->triggerGet(array(
+        return $this->triggerGet(array_merge(array(
             'output' => array('triggerid', 'description', 'expression', 'value'),
             'expandDescription' => true,
             'expandData' => true,
             'monitored' => true,
             'selectHosts' => 'extend',
-            'filter' => $filter,
             'groupids' => null,
             'hostids' => $hostIds,
             'limit' => 25000
-        ));
+        ), $filter));
     }
 
     public function triggersByHostgroup($name, $filter = array())
@@ -660,17 +701,16 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         }, $groups);
 
 
-        return $this->triggerGet(array(
+        return $this->triggerGet(array_merge(array(
             'output' => array('triggerid', 'description', 'expression', 'value'),
             'expandDescription' => true,
             'expandData' => true,
             'monitored' => true,
             'selectHosts' => 'extend',
-            'filter' => $filter,
             'groupids' => $groupIds,
             'hostids' => null,
             'limit' => 25000
-        ));
+        ), $filter));
     }
 
     public function historyItemGet($item, \DateTime $since, \DateTime $until)
