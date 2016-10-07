@@ -3,6 +3,8 @@
 namespace Amixsi\Zabbix;
 
 use Amixsi\Helper\ZabbixPriority;
+use Monolog\Logger;
+use Monolog\Processor\PsrLogMessageProcessor;
 
 class ZabbixApiTest extends \PHPUnit_Framework_TestCase
 {
@@ -13,7 +15,12 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
         $apiUrl = 'http://10.4.170.246/zabbix/api_jsonrpc.php';
         $user = 'amix';
         $password = getenv('AMIX_PASS');
-        $this->api = new ZabbixApi($apiUrl, $user, $password);
+        $logger = null;
+        if (getenv('LOG')) {
+            $logger = new Logger('test');
+            $logger->pushProcessor(new PsrLogMessageProcessor());
+        }
+        $this->api = new ZabbixApi($apiUrl, $user, $password, $logger);
     }
 
     public function testRouterReportGet()
@@ -195,6 +202,37 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
                 $this->assertObjectHasAttribute('elapsed', $downEvent);
                 $this->assertEquals('1', $downEvent->value, 'Wrong downEvent->value. '.$traceData);
                 $this->assertGreaterThan(0, $downEvent->elapsed, 'Wrong downEvent->elapsed. '.$traceData);
+            }
+        }
+    }
+
+    public function testDownEventsByTriggers2()
+    {
+        $since = new \DateTime('yesterday');
+        $since->add(new \DateInterval('PT8H'));
+        $until = clone $since;
+        $until->add(new \DateInterval('PT03H59M59S'));
+        $triggers = $this->api->triggersSearch(array(
+            'trigger' => '-O]'
+        ));
+        $triggersDownEvents = $this->api->downEventsByTriggers($triggers, $since, $until);
+        $this->assertGreaterThan(0, $triggersDownEvents);
+        foreach ($triggersDownEvents as $triggerDownEvents) {
+            $this->assertObjectHasAttribute('triggerid', $triggerDownEvents);
+            $this->assertObjectHasAttribute('downEvents', $triggerDownEvents);
+            $downEvents = $triggerDownEvents->downEvents;
+            $this->assertGreaterThan(0, $downEvents);
+            foreach ($downEvents as $downEvent) {
+                $traceData = var_export(array(
+                    'triggerid' => $triggerDownEvents->triggerid,
+                    'hosts' => $triggerDownEvents->hosts,
+                    'downEvent' => (array)$downEvent
+                ), true);
+                $this->assertObjectHasAttribute('value', $downEvent);
+                $this->assertObjectHasAttribute('clock', $downEvent);
+                $this->assertObjectHasAttribute('elapsed', $downEvent);
+                $this->assertEquals('1', $downEvent->value, 'Wrong downEvent->value. '.$traceData);
+                $this->assertGreaterThanOrEqual(0, $downEvent->elapsed, 'Wrong downEvent->elapsed. '.$traceData);
             }
         }
     }

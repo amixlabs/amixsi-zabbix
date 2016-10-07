@@ -246,33 +246,65 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
     /**
      * @SuppressWarnings("unused")
      */
-    public function eventsByTriggers($triggers, \DateTime $since, \DateTime $until)
+    public function eventsByTriggers($triggers, \DateTime $since = null, \DateTime $until = null)
     {
         $api = $this;
         $logger = $this->logger;
         $triggerIds = array_map(function ($trigger) {
             return $trigger->triggerid;
         }, $triggers);
-
-        if ($logger != null) {
-            $info = array(
-                'since' => $since->format('d/m/Y H:i:s'),
-                'until' => $until->format('d/m/Y H:i:s')
-            );
-            $logger->info('Zabbix get events [{since}, {until}]', $info);
-        }
-        $events = $this->eventGet(array(
+        $params = array(
             'triggerids' => $triggerIds,
-            'time_from' => $since->getTimestamp(),
-            'time_till' => $until->getTimestamp(),
             'output' => 'extend',
             'object' => 0,
             'source' => 0,
-            'sortfield' => 'eventid'
-        ));
+            'sortfield' => 'clock'
+        );
+        if ($since) {
+            $params['time_from'] = $since->getTimestamp();
+        }
+        if ($until) {
+            $params['time_till'] = $until->getTimestamp();
+        }
+        if ($logger != null) {
+            $info = array(
+                'since' => '-Infinity',
+                'until' => '+Infinity'
+            );
+            if ($since) {
+                $info['since'] = $since->format('d/m/Y H:i:s');
+            }
+            if ($until) {
+                $info['until'] = $until->format('d/m/Y H:i:s');
+            }
+            $logger->info('Zabbix get events [{since}, {until}]', $info);
+            $startTime = microtime(true);
+        }
+
+        $events = $this->eventGet($params);
 
         if ($logger != null) {
-            $logger->debug('Grouping events by trigger');
+            $elapsedTime = microtime(true) - $startTime;
+            $logger->info('{count} events selected in {elapsed}ms', array(
+                'count' => count($events),
+                'elapsed' => (int)($elapsedTime * 1000)
+            ));
+        }
+
+
+        $triggers = $this->groupEventsByTrigger($events, $triggers);
+        return array_map(function ($trigger) use ($api, $since, $until) {
+            $trigger->events = $this->normalizeEvents($trigger->events, $since, $until);
+            return $trigger;
+        }, $triggers);
+    }
+
+    private function groupEventsByTrigger($events, $triggers)
+    {
+        $logger = $this->logger;
+        if ($logger != null) {
+            $startTime = microtime(true);
+            $logger->info('Grouping events by trigger');
         }
 
         $idxEvents = array();
@@ -284,7 +316,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             }
         }
 
-        $triggers = array_map(function ($trigger) use ($idxEvents, $api) {
+        $triggers = array_map(function ($trigger) use ($idxEvents) {
             $trigger = clone $trigger;
             if (isset($idxEvents[$trigger->triggerid])) {
                 $trigger->events = $idxEvents[$trigger->triggerid];
@@ -294,7 +326,10 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             return $trigger;
         }, $triggers);
         if ($logger != null) {
-            $logger->debug('Events Grouped');
+            $elapsedTime = microtime(true) - $startTime;
+            $logger->info('Events grouped in {elapsed}ms', array(
+                'elapsed' => (int)($elapsedTime * 1000)
+            ));
         }
         return $triggers;
     }
@@ -444,25 +479,25 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         }, $dates);
     }
 
-    private function normalizeEvents($events, \DateTime $since, \DateTime $until)
+    private function normalizeEvents($events, \DateTime $since = null, \DateTime $until = null)
     {
         $logger = $this->logger;
         $nEvents = array();
 
         if ($logger) {
-            $logger->info('Zabbix normalize {count} events', array(
+            $logger->debug('Zabbix normalize {count} events', array(
                 'count' => count($events)
             ));
         }
         $event = current($events);
-        if ($event) {
+        if ($event && $since) {
             $previousEvents = $this->eventGet(array(
                 'triggerids' => array($event->objectid),
-                'eventid_till' => $event->eventid - 1,
+                'eventid_till' => $event->clock - 1,
                 'output' => array('eventid', 'objectid', 'value'),
                 'object' => 0,
                 'source' => 0,
-                'sortfield' => 'eventid',
+                'sortfield' => 'clock',
                 'sortorder' => 'DESC',
                 'limit' => 1
             ));
@@ -480,12 +515,12 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             $nEvents[] = $lastEvent;
             $lastEvent = $event;
         }
-        if ($lastEvent) {
+        if ($lastEvent && $until) {
             $lastEvent->elapsed = $until->getTimestamp() - $lastEvent->clock;
             $nEvents[] = $lastEvent;
         }
         if ($logger) {
-            $logger->info('Zabbix normalize {count} events', array(
+            $logger->debug('Zabbix normalize {count} events', array(
                 'count' => count($events)
             ));
         }
@@ -863,39 +898,25 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return $this->triggerGet($params2);
     }
 
-    public function downEventsByTriggers($triggers)
+    public function downEventsByTriggers($triggers, \DateTime $since = null, \DateTime $until = null)
     {
-        $api = $this;
         $logger = $this->logger;
-        $triggerIds = array_map(function ($trigger) {
-            return $trigger->triggerid;
-        }, $triggers);
-
+        $triggers = $this->eventsByTriggers($triggers, $since, $until);
         if ($logger != null) {
-            $logger->info('Zabbix get events by triggerids');
+            $logger->info('Calculating down events');
+            $startTime = microtime(true);
         }
-        $events = $this->eventGet(array(
-            'triggerids' => $triggerIds,
-            'output' => 'extend',
-            'object' => 0,
-            'source' => 0,
-            'sortfield' => 'eventid'
-        ));
-
-        if ($logger != null) {
-            $logger->debug('Calculating availability');
-        }
-        $triggers = array_map(function ($trigger) use ($events, $api) {
-            $triggerEvents = array_filter($events, function ($event) use ($trigger) {
-                return $event->objectid == $trigger->triggerid;
+        $triggers = array_map(function ($trigger) {
+            $trigger->downEvents = array_filter($trigger->events, function ($event) {
+                return $event->value == '1';
             });
-            $trigger = clone $trigger;
-            $trigger->downEvents = $api->calculateDownEvents($triggerEvents);
-            $trigger->events = $triggerEvents;
             return $trigger;
         }, $triggers);
         if ($logger != null) {
-            $logger->debug('Down events calculated');
+            $elapsedTime = microtime(true) - $startTime;
+            $logger->info('Down events calculated in {elapsed}ms', array(
+                'elapsed' => (int)($elapsedTime * 1000)
+            ));
         }
         return $triggers;
     }
