@@ -293,10 +293,21 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
 
 
         $triggers = $this->groupEventsByTrigger($events, $triggers);
-        return array_map(function ($trigger) use ($api, $since, $until) {
+        if ($logger != null) {
+            $logger->info('Zabbix normalizing trigger events');
+            $startTime = microtime(true);
+        }
+        $triggers = array_map(function ($trigger) use ($api, $since, $until) {
             $trigger->events = $this->normalizeEvents($trigger->events, $since, $until);
             return $trigger;
         }, $triggers);
+        if ($logger != null) {
+            $elapsedTime = microtime(true) - $startTime;
+            $logger->info('Triggers normalized in {elapsed}ms', array(
+                'elapsed' => (int)($elapsedTime * 1000)
+            ));
+        }
+        return $triggers;
     }
 
     private function groupEventsByTrigger($events, $triggers)
@@ -882,7 +893,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
     public function triggersSearch(array $params)
     {
         $params2 = array(
-            'output' => array('triggerid', 'description'),
+            'output' => array('triggerid', 'description', 'priority'),
             'monitored' => true,
             'selectHosts' => array('name')
         );
