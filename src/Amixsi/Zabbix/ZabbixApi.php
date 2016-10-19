@@ -246,7 +246,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
     /**
      * @SuppressWarnings("unused")
      */
-    public function eventsByTriggers($triggers, \DateTime $since = null, \DateTime $until = null)
+    public function eventsByTriggers($triggers, \DateTime $since = null, \DateTime $until = null, $priorities = null)
     {
         $api = $this;
         $logger = $this->logger;
@@ -254,12 +254,19 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             return $trigger->triggerid;
         }, $triggers);
         $params = array(
-            'triggerids' => $triggerIds,
             'output' => 'extend',
             'object' => 0,
             'source' => 0,
             'sortfield' => 'clock'
         );
+        if (count($triggerIds)) {
+            $params['triggerids'] = $triggerIds;
+        } else {
+            $params['selectHosts'] = array('name');
+            $params['selectRelatedObject'] = array(
+                'triggerid', 'priority', 'description'
+            );
+        }
         if ($since) {
             $params['time_from'] = $since->getTimestamp();
         }
@@ -282,6 +289,19 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         }
 
         $events = $this->eventGet($params);
+
+        if (!count($triggers)) {
+            if (is_array($priorities)) {
+                $events = array_filter($events, function ($event) use ($priorities) {
+                    return in_array($event->relatedObject->priority, $priorities);
+                });
+            }
+            foreach ($events as $event) {
+                $trigger = $event->relatedObject;
+                $trigger->hosts = $event->hosts;
+                $triggers[$trigger->triggerid] = $trigger;
+            }
+        }
 
         if ($logger != null) {
             $elapsedTime = microtime(true) - $startTime;
@@ -892,6 +912,11 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
 
     public function triggersSearch(array $params)
     {
+        $logger = $this->logger;
+        if ($logger != null) {
+            $logger->info('Triggers searching...');
+            $startTime = microtime(true);
+        }
         $params2 = array(
             'output' => array('triggerid', 'description', 'priority'),
             'monitored' => true,
@@ -906,13 +931,27 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         if (isset($params['expandDescription'])) {
             $params2['expandDescription'] = true;
         }
-        return $this->triggerGet($params2);
+        if (isset($params['filter'])) {
+            $params2['filter'] = $params['filter'];
+        }
+        $triggers = $this->triggerGet($params2);
+        if ($logger != null) {
+            $elapsedTime = microtime(true) - $startTime;
+            $logger->info('Triggers search in {elapsed}ms', array(
+                'elapsed' => (int)($elapsedTime * 1000)
+            ));
+        }
+        return $triggers;
     }
 
-    public function downEventsByTriggers($triggers, \DateTime $since = null, \DateTime $until = null)
-    {
+    public function downEventsByTriggers(
+        $triggers,
+        \DateTime $since = null,
+        \DateTime $until = null,
+        $priorities = null
+    ) {
         $logger = $this->logger;
-        $triggers = $this->eventsByTriggers($triggers, $since, $until);
+        $triggers = $this->eventsByTriggers($triggers, $since, $until, $priorities);
         if ($logger != null) {
             $logger->info('Calculating down events');
             $startTime = microtime(true);
