@@ -257,7 +257,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             'output' => 'extend',
             'object' => 0,
             'source' => 0,
-            'sortfield' => 'clock'
+            'sortfield' => array('clock', 'eventid')
         );
         if (count($triggerIds)) {
             $params['triggerids'] = $triggerIds;
@@ -318,7 +318,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             $startTime = microtime(true);
         }
         $triggers = array_map(function ($trigger) use ($api, $since, $until) {
-            $trigger->events = $this->normalizeEvents($trigger->events, $since, $until);
+            $trigger->events = $api->normalizeEvents($trigger->events, $since, $until);
             return $trigger;
         }, $triggers);
         if ($logger != null) {
@@ -524,11 +524,11 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         if ($event && $since) {
             $previousEvents = $this->eventGet(array(
                 'triggerids' => array($event->objectid),
-                'eventid_till' => $event->clock - 1,
+                'time_till' => $event->clock - 1,
                 'output' => array('eventid', 'objectid', 'value'),
                 'object' => 0,
                 'source' => 0,
-                'sortfield' => 'clock',
+                'sortfield' => array('clock', 'eventid'),
                 'sortorder' => 'DESC',
                 'limit' => 1
             ));

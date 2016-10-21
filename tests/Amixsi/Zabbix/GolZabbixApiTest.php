@@ -69,4 +69,28 @@ class GolZabbixApiTest extends \PHPUnit_Framework_TestCase
             $this->assertObjectHasAttribute('filteredEvents', $trigger);
         }
     }
+
+    public function testGolDownEvents01()
+    {
+        $api = $this->api;
+        $since = \DateTime::createFromFormat('Y-m-d H:i:s', '2016-09-02 00:00:00');
+        $until = \DateTime::createFromFormat('Y-m-d H:i:s', '2016-09-02 23:59:59');
+        $priorities = array(4, 5);
+        $triggers = $api->triggersSearch(array(
+            'trigger' => '[003.398-X]',
+            'filter' => array(
+                'priority' => $priorities
+            )
+        ));
+        $this->assertGreaterThan(0, $triggers);
+        $triggers = $api->downEventsByTriggers($triggers, $since, $until, $priorities);
+        $elapsed = 0;
+        foreach ($triggers as $trigger) {
+            $downEvents = $trigger->downEvents;
+            foreach ($downEvents as $event) {
+                $elapsed += $event->elapsed;
+            }
+        }
+        $this->assertLessThanOrEqual(120, $elapsed);
+    }
 }
