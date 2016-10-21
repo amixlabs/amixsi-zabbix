@@ -1,0 +1,55 @@
+{
+    "description": "Maintenance structure",
+    "type": "object",
+    "properties": {
+        "maintenanceid": {
+            "type": "string",
+            "pattern": "^a"
+        },
+        "name": "string",
+        "active_since": {
+            "type": "number"
+        },
+        "active_till": "number",
+        "description": "string",
+        "maintenance_type": "number",
+        "groups": {
+            "type": "array",
+            "items": {
+                "type": "number",
+                "properties": {
+                    "groupid": "string"
+                }
+            }
+        },
+        "hosts": {
+            "type": "array",
+            "items": {
+                "type": "number",
+                "properties": {
+                    "hostid": "string"
+                }
+            }
+        },
+        "timeperiods": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "timeperiod": "string",
+                    "day": "number",
+                    "dayofweek": "number",
+                    "every": "number",
+                    "month": "number",
+                    "period": "number",
+                    "stat_date": "number",
+                    "start_time": "number",
+                    "timeperiod_type": "number"
+                }
+            }
+        }
+    },
+    "required": [
+        "maintenanceid"
+    ]
+}

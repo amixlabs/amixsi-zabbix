@@ -14,7 +14,8 @@
         "psr/log": "~1.0",
         "confirm-it-solutions/php-zabbix-api": "~2.4",
         "amixsi/helper": "~1.0",
-        "rych/bytesize": "^1.0"
+        "rych/bytesize": "^1.0",
+        "justinrainbow/json-schema": "^3.0"
     },
     "autoload": {
         "psr-4": {
