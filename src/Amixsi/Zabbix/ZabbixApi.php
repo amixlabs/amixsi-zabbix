@@ -162,7 +162,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
      * @SuppressWarnings(PHPMD.CyclomaticComplexity)
      * @SuppressWarnings(PHPMD.NPathComplexity)
      */
-    public function availabilityByTriggers2(\DateTime $since, \DateTime $until, $priorities = null)
+    public function availabilityByTriggers2(\DateTime $since, \DateTime $until, $priorities = null, $options = array())
     {
         $api = $this;
         $logger = $this->logger;
@@ -220,14 +220,14 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         if ($logger != null) {
             $logger->info('Zabbix get related triggers with expanded description and host');
         }
-        $triggers = $this->triggerGet(array(
+        $triggerOptions = array_merge(array(
             'output' => array('triggerid', 'description', 'expression', 'priority', 'value'),
             'expandDescription' => true,
             'expandData' => true,
             'monitored' => true,
             'filter' => array('triggerid' => $triggerids)
-        ));
-
+        ), $options);
+        $triggers = $this->triggerGet($triggerOptions);
         if ($logger != null) {
             $logger->debug('Calculating availability');
         }
@@ -697,9 +697,9 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return $triggers;
     }
 
-    public function disasterReportGet2(\DateTime $since, \DateTime $until, $priorities)
+    public function disasterReportGet2(\DateTime $since, \DateTime $until, $priorities, $options = array())
     {
-        $triggers = $this->availabilityByTriggers2($since, $until, $priorities);
+        $triggers = $this->availabilityByTriggers2($since, $until, $priorities, $options);
         $triggers = array_filter($triggers, function ($trigger) {
             return $trigger->availability < 1;
         });
