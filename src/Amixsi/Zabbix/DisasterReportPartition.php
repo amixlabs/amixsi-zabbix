@@ -40,9 +40,21 @@ class DisasterReportPartition
     {
         $api = $this->api;
         $conn = $this->conn;
+        $logger = $this->logger;
         $this->updateOrCreateSchema($conn);
         $dateRange = new DateRange($since, $until);
         $dates = $dateRange->getRange();
+        $dayPartitions = array(
+            array(
+                'PT23H59M59S'
+            ),
+            array(
+                'PT6H0M0S',
+                'PT6H0M0S',
+                'PT6H0M0S',
+                'PT5H59M59S'
+            ),
+        );
         $months = [];
         foreach ($dates as $date) {
             $month = $date->format('m/Y');
@@ -55,10 +67,36 @@ class DisasterReportPartition
                 ];
             }
             if (!$this->dateExists($conn, $date)) {
-                $date_until = clone $date;
-                $date_until->add(new \DateInterval('PT23H59M59S'));
-                $triggers = $api->disasterReportGet2($date, $date_until, $priorities, $options);
-                $this->insertTriggers($conn, $triggers, $date);
+                $exception = null;
+                foreach ($dayPartitions as $dayPartition) {
+                    try {
+                        if ($exception) {
+                            if ($logger) {
+                                $logger->warning('Try again...');
+                            }
+                            $exception = null;
+                        }
+                        $date_since = clone $date;
+                        $date_until = clone $date;
+                        $triggers = array();
+                        foreach ($dayPartition as $interval) {
+                            $date_until->add(new \DateInterval($interval));
+                            $triggers2 = $api->disasterReportGet2($date_since, $date_until, $priorities, $options);
+                            $triggers = array_merge($triggers, $triggers2);
+                            $logger->debug('Triggers count {count}', array(
+                                'count' => count($triggers)
+                            ));
+                            $date_since = clone $date_until;
+                        }
+                        $this->insertTriggers($conn, $triggers, $date);
+                        break;
+                    } catch (\ZabbixApi\Exception $exp) {
+                        $exception = $exp;
+                    }
+                }
+                if ($exception) {
+                    throw $exception;
+                }
             }
         }
         return array_map(function ($month) use ($conn, $priorities) {
