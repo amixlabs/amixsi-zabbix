@@ -55,17 +55,7 @@ class DisasterReportPartition
                 'PT5H59M59S'
             ),
         );
-        $months = [];
         foreach ($dates as $date) {
-            $month = $date->format('m/Y');
-            if (array_key_exists($month, $months)) {
-                $months[$month]['until'] = $date;
-            } else {
-                $months[$month] = [
-                    'since' => $date,
-                    'until' => $date
-                ];
-            }
             if (!$this->dateExists($conn, $date)) {
                 $exception = null;
                 foreach ($dayPartitions as $dayPartition) {
@@ -99,11 +89,43 @@ class DisasterReportPartition
                 }
             }
         }
-        return array_map(function ($month) use ($conn, $priorities) {
-            $newMonth = $month;
-            $newMonth['triggers'] = $this->getTriggers($conn, $month['since'], $month['until'], $priorities);
-            return $newMonth;
-        }, $months);
+        $triggers = $this->getTriggers($conn, $since, $until);
+        $triggersGrouped = $this->groupTriggers($triggers);
+        return $triggersGrouped;
+    }
+
+    private function groupTriggers($triggers)
+    {
+        $group = array();
+        foreach ($triggers as $trigger) {
+            $key = $trigger['description'];
+            $dt_alert = $trigger['dt_alert'];
+            $count = $trigger['count'];
+            if (isset($group[$key])) {
+                $dates = $group[$key]['dates'];
+                if (isset($dates[$dt_alert])) {
+                    $dates[$dt_alert]['count'] += $count;
+                } else {
+                    $group[$key]['dates'][$dt_alert] = array(
+                        'dt_alert' => new \DateTime($dt_alert),
+                        'count' => $count
+                    );
+                }
+                $group[$key]['count'] += $count;
+            } else {
+                $group[$key] = array(
+                    'description' => $key,
+                    'dates' => array(
+                        $dt_alert => array(
+                            'dt_alert' => new \DateTime($dt_alert),
+                            'count' => $count
+                        )
+                    ),
+                    'count' => $count
+                );
+            }
+        }
+        return array_values($group);
     }
 
     private function updateOrCreateSchema(Connection $conn)
@@ -170,20 +192,20 @@ class DisasterReportPartition
         return true;
     }
 
-    private function getTriggers(Connection $conn, \DateTime $since, \DateTime $until, $priorities)
+    private function getTriggers(Connection $conn, \DateTime $since, \DateTime $until)
     {
         return $conn->fetchAll(
-            '
+            "
             select
                 description,
-                sum(count) as count,
-                sum(elapsed) as elapsed
+                strftime('%Y-%m-01', dt_alert) as dt_alert,
+                sum(count) as count
             from alert
             where dt_alert between ? and ?
             and value = 1
-            group by description
-            order by description
-            ',
+            group by 1, 2
+            order by 1, 2
+            ",
             array($since, $until),
             array('date', 'date')
         );
