@@ -90,21 +90,30 @@ class DisasterReportPartition
             }
         }
         $triggers = $this->getTriggers($conn, $since, $until);
-        $triggersGrouped = $this->groupTriggers($triggers);
+        $options2 = array('withHost' => false);
+        if (isset($options['withHost'])) {
+            $options2['withHost'] = $options['withHost'];
+        }
+        $triggersGrouped = $this->groupTriggers($triggers, $options2);
         return $triggersGrouped;
     }
 
-    private function groupTriggers($triggers)
+    private function groupTriggers($triggers, $options)
     {
         $group = array();
+        $withHost = isset($options['withHost']) && $options['withHost'];
         foreach ($triggers as $trigger) {
-            $key = $trigger['description'];
+            if ($withHost) {
+                $key = $trigger['description'] . '|' . $trigger['host'];
+            } else {
+                $key = $trigger['description'];
+            }
             $dt_alert = $trigger['dt_alert'];
             $count = $trigger['count'];
             if (isset($group[$key])) {
                 $dates = $group[$key]['dates'];
                 if (isset($dates[$dt_alert])) {
-                    $dates[$dt_alert]['count'] += $count;
+                    $group[$key]['dates'][$dt_alert]['count'] += $count;
                 } else {
                     $group[$key]['dates'][$dt_alert] = array(
                         'dt_alert' => new \DateTime($dt_alert),
@@ -114,7 +123,8 @@ class DisasterReportPartition
                 $group[$key]['count'] += $count;
             } else {
                 $group[$key] = array(
-                    'description' => $key,
+                    'description' => $trigger['description'],
+                    'host' => $trigger['host'],
                     'dates' => array(
                         $dt_alert => array(
                             'dt_alert' => new \DateTime($dt_alert),
@@ -198,13 +208,14 @@ class DisasterReportPartition
             "
             select
                 description,
+                host,
                 strftime('%Y-%m-01', dt_alert) as dt_alert,
                 sum(count) as count
             from alert
             where dt_alert between ? and ?
             and value = 1
-            group by 1, 2
-            order by 1, 2
+            group by 1, 2, 3
+            order by 1, 2, 3
             ",
             array($since, $until),
             array('date', 'date')
