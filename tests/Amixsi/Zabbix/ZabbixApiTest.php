@@ -89,8 +89,52 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
         $this->assertObjectHasAttribute('events', $current);
         $this->assertObjectHasAttribute('availability', $current);
         $this->assertInternalType('array', $current->events);
-        $this->assertInternalType('float', $current->availability);
+        $this->assertTrue(is_numeric($current->availability));
         $this->assertEquals($disaster, $current->priority);
+    }
+
+    public function testAvailabilityByTriggers2WithExcludeHostgroup()
+    {
+        $since = new \DateTime('yesterday');
+        $since->add(new \DateInterval('PT8H'));
+        $until = clone $since;
+        $until->add(new \DateInterval('PT03H59M59S'));
+        $disaster = ZabbixPriority::fromString('disaster');
+        $options = array(
+            'excludeHostgroups' => array(
+                'DESENVOLVIMENTO',
+                'HOMOLOGACAO',
+            )
+        );
+        $triggers = $this->api->availabilityByTriggers2(
+            $since,
+            $until,
+            $disaster,
+            $options
+        );
+        $current = current($triggers);
+        $this->assertObjectHasAttribute('triggerid', $current);
+        $this->assertObjectHasAttribute('description', $current);
+        $this->assertObjectHasAttribute('host', $current);
+        $this->assertObjectHasAttribute('expression', $current);
+        $this->assertObjectHasAttribute('priority', $current);
+        $this->assertObjectHasAttribute('value', $current);
+        $this->assertObjectHasAttribute('events', $current);
+        $this->assertObjectHasAttribute('availability', $current);
+        $this->assertObjectHasAttribute('groups', $current);
+        $this->assertInternalType('array', $current->events);
+        $this->assertTrue(is_numeric($current->availability));
+        $this->assertEquals($disaster, $current->priority);
+        $this->assertGreaterThan(0, count($current->groups));
+        $group = $current->groups[0];
+        $options['excludeHostgroups'][] = $group->name;
+        $triggers2 = $this->api->availabilityByTriggers2(
+            $since,
+            $until,
+            $disaster,
+            $options
+        );
+        $this->assertGreaterThan(count($triggers2), count($triggers));
     }
 
     public function testApplication()

@@ -227,7 +227,24 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             'monitored' => true,
             'filter' => array('triggerid' => $triggerids)
         ), $options);
+        if (isset($options['excludeHostgroups'])) {
+            $triggerOptions['selectGroups'] = array('name');
+        }
         $triggers = $this->triggerGet($triggerOptions);
+        if (isset($options['excludeHostgroups'])) {
+            $excludeHostgroups = $options['excludeHostgroups'];
+            if ($logger != null) {
+                $logger->debug('Filter hostgroups');
+            }
+            $triggers = array_filter($triggers, function ($trigger) use ($excludeHostgroups) {
+                foreach ($trigger->groups as $group) {
+                    if (in_array($group->name, $excludeHostgroups)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+        }
         if ($logger != null) {
             $logger->debug('Calculating availability');
         }

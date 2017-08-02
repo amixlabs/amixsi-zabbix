@@ -13,3 +13,9 @@ Run tests:
 ```
 AMIX_PASS=... AMIX_REPORTS_PASS=... AMIX_API_MAINTENANCE=... DASA_USER=... DASA_PASS=... composer test
 ```
+
+# Docker
+
+```bash
+docker-compose run --rm shell
+```

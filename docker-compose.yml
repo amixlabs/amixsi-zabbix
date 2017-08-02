@@ -1,0 +1,13 @@
+version: '2'
+
+services:
+  shell:
+    image: amixsi/centos:7.3
+    environment:
+    - http_proxy
+    - https_proxy
+    - no_proxy
+    - AMIX_PASS
+    - XDEBUG_CONFIG
+    volumes:
+    - .:/app

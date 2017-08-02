@@ -4,3 +4,4 @@ build/
 zabbix-report.phar
 pass
 composer.lock
+.env
