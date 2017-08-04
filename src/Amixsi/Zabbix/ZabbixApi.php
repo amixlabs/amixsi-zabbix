@@ -937,7 +937,8 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         $params2 = array(
             'output' => array('triggerid', 'description', 'priority'),
             'monitored' => true,
-            'selectHosts' => array('name')
+            'selectHosts' => array('name'),
+            'selectGroups' => array('name')
         );
         if (isset($params['group'])) {
             $params2['groupids'] = $this->groupidsSearch($params['group']);

@@ -127,7 +127,8 @@ class TriggerEventsPartition
             $alert->addColumn('dt_alert', 'datetimetz', array('unsigned' => true));
             $alert->addColumn('triggerid', 'integer', array('unsigned' => true));
             $alert->addColumn('description', 'string');
-            $alert->addColumn('host', 'string');
+            $alert->addColumn('hosts', 'string');
+            $alert->addColumn('groups', 'string');
             $alert->addColumn('priority', 'integer', array('unsigned' => true));
             $alert->addColumn('value', 'integer', array('unsigned' => true));
             $alert->addColumn('count', 'integer', array('unsigned' => true));
@@ -171,22 +172,29 @@ class TriggerEventsPartition
         $dateType = \Doctrine\DBAL\Types\Type::getType('datetimetz');
         $platform = $conn->getDatabasePlatform();
         foreach ($triggers as $trigger) {
+            $hosts = array();
             foreach ($trigger->hosts as $host) {
-                foreach ($trigger->events as $event) {
-                    $clock = new \DateTime();
-                    $clock->setTimestamp($event->clock);
-                    $dt_alert = $dateType->convertToDatabaseValue($clock, $platform);
-                    $conn->insert('alert', [
-                        'dt_alert' => $dt_alert,
-                        'triggerid' => $trigger->triggerid,
-                        'description' => $trigger->description,
-                        'host' => $host->name,
-                        'priority' => $trigger->priority,
-                        'value' => $event->value,
-                        'count' => 1,
-                        'elapsed' => $event->elapsed,
-                    ]);
-                }
+                $hosts[] = $host->name;
+            }
+            $groups = array();
+            foreach ($trigger->groups as $group) {
+                $groups[] = $group->name;
+            }
+            foreach ($trigger->events as $event) {
+                $clock = new \DateTime();
+                $clock->setTimestamp($event->clock);
+                $dt_alert = $dateType->convertToDatabaseValue($clock, $platform);
+                $conn->insert('alert', [
+                    'dt_alert' => $dt_alert,
+                    'triggerid' => $trigger->triggerid,
+                    'description' => $trigger->description,
+                    'hosts' => implode(',', $hosts),
+                    'groups' => implode(',', $groups),
+                    'priority' => $trigger->priority,
+                    'value' => $event->value,
+                    'count' => 1,
+                    'elapsed' => $event->elapsed,
+                ]);
             }
         }
         return true;
