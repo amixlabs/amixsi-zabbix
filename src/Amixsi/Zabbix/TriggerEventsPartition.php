@@ -57,7 +57,7 @@ class TriggerEventsPartition
         );
     }
 
-    private function cacheEvents($refTriggers, \DateTime $since, \DateTime $until, $priorities = null)
+    public function cacheEvents($refTriggers, \DateTime $since, \DateTime $until, $priorities = null)
     {
         $api = $this->api;
         $conn = $this->conn;
