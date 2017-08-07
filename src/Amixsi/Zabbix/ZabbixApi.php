@@ -279,7 +279,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         if (count($triggerIds)) {
             $params['triggerids'] = $triggerIds;
         } else {
-            $params['selectHosts'] = array('name');
+            $params['selectHosts'] = array('hostid', 'name');
             $params['selectRelatedObject'] = array(
                 'triggerid', 'priority', 'description'
             );
@@ -308,14 +308,40 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         $events = $this->eventGet($params);
 
         if (!count($triggers)) {
-            if (is_array($priorities)) {
+            if (is_array($priorities) && count($priorities) > 0) {
                 $events = array_filter($events, function ($event) use ($priorities) {
                     return in_array($event->relatedObject->priority, $priorities);
                 });
             }
+            $hostids = array();
+            foreach ($events as $event) {
+                foreach ($event->hosts as $hosts) {
+                    $hostids[$hosts->hostid] = $hosts->hostid;
+                }
+            }
+            $hostParams = array(
+                'output' => array('hostid', 'name'),
+                'filter' => array(
+                    'hostids' => $hostids,
+                ),
+                'selectGroups' => array('name'),
+            );
+            $hosts = $this->hostGet($hostParams);
+            $hostIndexed = array();
+            foreach ($hosts as $host) {
+                $hostIndexed[$host->hostid] = $host;
+            }
             foreach ($events as $event) {
                 $trigger = $event->relatedObject;
                 $trigger->hosts = $event->hosts;
+                $groups = array();
+                foreach ($event->hosts as $h) {
+                    $host = $hostIndexed[$h->hostid];
+                    foreach ($host->groups as $group) {
+                        $groups[$group->name] = $group;
+                    }
+                }
+                $trigger->groups = array_values($groups);
                 $triggers[$trigger->triggerid] = $trigger;
             }
         }
@@ -542,7 +568,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             $previousEvents = $this->eventGet(array(
                 'triggerids' => array($event->objectid),
                 'time_till' => $event->clock - 1,
-                'output' => array('eventid', 'objectid', 'value'),
+                'output' => array('eventid', 'clock', 'objectid', 'value'),
                 'object' => 0,
                 'source' => 0,
                 'sortfield' => array('clock', 'eventid'),
@@ -552,8 +578,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             if (count($previousEvents) > 0) {
                 $lastEvent = current($previousEvents);
                 $lastEvent->eventid = null;
-                $lastEvent->clock = $since->getTimestamp();
-                $lastEvent->elapsed = $event->clock - $lastEvent->clock;
+                $lastEvent->elapsed = $event->clock - $since->getTimestamp();
                 $nEvents[] = $lastEvent;
             }
         }

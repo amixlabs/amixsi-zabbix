@@ -67,13 +67,20 @@ class TriggerEventsPartition
         $dates = $dateRange->getRange();
         $dayPartitions = array(
             array(
-                'PT23H59M59S'
-            ),
-            array(
                 'PT6H0M0S',
                 'PT6H0M0S',
                 'PT6H0M0S',
                 'PT5H59M59S'
+            ),
+            array(
+                'PT3H0M0S',
+                'PT3H0M0S',
+                'PT3H0M0S',
+                'PT3H0M0S',
+                'PT3H0M0S',
+                'PT3H0M0S',
+                'PT3H0M0S',
+                'PT2H59M59S'
             ),
         );
         foreach ($dates as $date) {
@@ -125,6 +132,7 @@ class TriggerEventsPartition
             $schema = new \Doctrine\DBAL\Schema\Schema();
             $alert = $schema->createTable('alert');
             $alert->addColumn('dt_alert', 'datetimetz', array('unsigned' => true));
+            $alert->addColumn('dt_end', 'datetimetz', array('unsigned' => true));
             $alert->addColumn('triggerid', 'integer', array('unsigned' => true));
             $alert->addColumn('description', 'string');
             $alert->addColumn('hosts', 'string');
@@ -133,7 +141,7 @@ class TriggerEventsPartition
             $alert->addColumn('value', 'integer', array('unsigned' => true));
             $alert->addColumn('count', 'integer', array('unsigned' => true));
             $alert->addColumn('elapsed', 'integer', array('unsigned' => true));
-            $alert->addIndex(array('dt_alert'));
+            $alert->addIndex(array('dt_alert', 'dt_end'));
             $sqls = $schema->toSql($conn->getDatabasePlatform());
             foreach ($sqls as $sql) {
                 $conn->query($sql);
@@ -184,8 +192,11 @@ class TriggerEventsPartition
                 $clock = new \DateTime();
                 $clock->setTimestamp($event->clock);
                 $dt_alert = $dateType->convertToDatabaseValue($clock, $platform);
+                $clock->setTimestamp($event->clock + $event->elapsed);
+                $dt_end = $dateType->convertToDatabaseValue($clock, $platform);
                 $conn->insert('alert', [
                     'dt_alert' => $dt_alert,
+                    'dt_end' => $dt_end,
                     'triggerid' => $trigger->triggerid,
                     'description' => $trigger->description,
                     'hosts' => implode(',', $hosts),
