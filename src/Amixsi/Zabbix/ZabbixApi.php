@@ -56,6 +56,16 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return ($elapsed - $problem) / $elapsed;
     }
 
+    public function calculateAvailability2($events, \DateTime $since, \DateTime $until)
+    {
+        if (!count($events)) {
+            return 1;
+        }
+        $elapsed = $until->getTimestamp() - $since->getTimestamp();
+        $problem = $this->problemAccount2($events, $since, $until);
+        return ($elapsed - $problem) / $elapsed;
+    }
+
     public function triggerByGroups($groups)
     {
         $logger = $this->logger;
@@ -225,11 +235,9 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             'expandDescription' => true,
             'expandData' => true,
             'monitored' => true,
-            'filter' => array('triggerid' => $triggerids)
+            'filter' => array('triggerid' => $triggerids),
+            'selectGroups' => array('name'),
         ), $options);
-        if (isset($options['excludeHostgroups'])) {
-            $triggerOptions['selectGroups'] = array('name');
-        }
         $triggers = $this->triggerGet($triggerOptions);
         if (isset($options['excludeHostgroups'])) {
             $excludeHostgroups = $options['excludeHostgroups'];
@@ -250,8 +258,11 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         }
         $triggers = array_map(function ($trigger) use ($triggersEvents, $since, $until, $api) {
             $triggerEvents = $triggersEvents[$trigger->triggerid];
-            $trigger->events = $triggerEvents->events;
-            $trigger->availability = $api->calculateAvailability($triggerEvents->events, $since, $until);
+            $events = array_filter($triggerEvents->events, function ($event) use ($since, $until) {
+                return $since->getTimestamp() <= $event->clock && $event->clock <= $until->getTimestamp();
+            });
+            $trigger->events = $api->normalizeEvents($events, $since, $until);
+            $trigger->availability = $api->calculateAvailability2($trigger->events, $since, $until);
             return $trigger;
         }, $triggers);
         if ($logger != null) {
@@ -603,6 +614,17 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
     private function problemAccount($events, \DateTime $since, \DateTime $until)
     {
         $events = $this->normalizeEvents($events, $since, $until);
+        $problem = 0;
+        foreach ($events as $event) {
+            if ($event->value == '1') {
+                $problem += $event->elapsed;
+            }
+        }
+        return $problem;
+    }
+
+    private function problemAccount2($events, \DateTime $since, \DateTime $until)
+    {
         $problem = 0;
         foreach ($events as $event) {
             if ($event->value == '1') {
