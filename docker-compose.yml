@@ -2,12 +2,14 @@ version: '2'
 
 services:
   shell:
-    image: amixsi/centos:7.3
+    image: amixsi/centos:7
     environment:
     - http_proxy
     - https_proxy
     - no_proxy
     - AMIX_PASS
     - XDEBUG_CONFIG
+    - LOCAL_USER_ID
     volumes:
     - .:/app
+    - ./docker/php.ini:/etc/php.d/custom.ini
