@@ -1355,4 +1355,81 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         }
         return array_merge($item, $values);
     }
+
+    public function computedHistoryItemsSearch($options)
+    {
+        $api = $this;
+        $names = (array)$options['name'];
+        list($since, $until) = $options['interval'];
+        $computed = $options['computed'];
+        $historyType = isset($options['historyType']) ? $options['historyType'] : 0;
+        $maxItem = isset($options['maxItem']) ? $options['maxItem'] : 10;
+        $searches = array_map(function ($name) use ($api, $since, $until, $computed, $historyType, $maxItem) {
+            $items = $api->itemGet(array(
+                'output' => array('itemid', 'name'),
+                'selectHosts' => array('hostid', 'host'),
+                'search' => array(
+                    'name' => $name
+                )
+            ));
+            $indexedItems = array();
+            foreach ($items as $item) {
+                $item->values = array();
+                $indexedItems[$item->itemid] = $item;
+            }
+            $itemids = array_keys($indexedItems);
+            $offset = 0;
+            $ids = array_slice($itemids, $offset, $maxItem);
+            while (count($ids) > 0) {
+                $history = $api->historyGet($params = array(
+                    'history' => $historyType,
+                    'itemids' => $ids,
+                    'time_from' => $since->getTimestamp(),
+                    'time_till' => $until->getTimestamp(),
+                    'sortfield' => 'itemid',
+                    'output' => 'extend'
+                ));
+                foreach ($history as $item) {
+                    $indexedItem = $indexedItems[$item->itemid];
+                    $indexedItem->values[] = (float)$item->value;
+                }
+                foreach ($ids as $id) {
+                    $item = $indexedItems[$id];
+                    $item->computed = $api->computedItemValues($item, $computed);
+                    unset($item->values);
+                }
+                $offset += $maxItem;
+                $ids = array_slice($itemids, $offset, $maxItem);
+            }
+            return array(
+                'name' => $name,
+                'items' => array_values($indexedItems),
+            );
+        }, $names);
+        return $searches;
+    }
+
+    public function computedItemValues($item, $computed)
+    {
+        sort($item->values);
+        return array_map(function ($c) use ($item) {
+            $value = null;
+            if ($c['type'] == 'avg') {
+                $n = count($item->values);
+                list($start, $end) = $c['range'];
+                $offsetStart = floor($start * $n);
+                $offsetEnd = floor($end * $n);
+                $values = array_slice($item->values, $offsetStart, $offsetEnd - $offsetStart);
+                $value = array_sum($values);
+                if ($value) {
+                    $value /= count($values);
+                }
+            }
+            return array(
+                'name' => $c['name'],
+                'value' => $value
+            );
+        }, (array)$computed);
+
+    }
 }

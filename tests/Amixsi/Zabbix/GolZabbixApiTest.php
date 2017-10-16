@@ -93,4 +93,38 @@ class GolZabbixApiTest extends \PHPUnit_Framework_TestCase
         }
         $this->assertLessThanOrEqual(120, $elapsed);
     }
+
+    public function testCPUHistory01()
+    {
+        $since = \DateTime::createFromFormat('Y-m-d H:i:s', '2017-10-16 00:00:00');
+        $until = \DateTime::createFromFormat('Y-m-d H:i:s', '2017-10-16 10:00:00');
+        $api = $this->api;
+        $searches = $api->computedHistoryItemsSearch(array(
+            'name' => array('(REL-CAP-WIN-CPU)'),
+            'computed' => array(
+                array('type' => 'avg', 'range' => array(0, 1), 'name' => 'avg'),
+                array('type' => 'avg', 'range' => array(0, 0.1), 'name' => 'avg_0_10'),
+                array('type' => 'avg', 'range' => array(0.9, 1), 'name' => 'avg_90_100'),
+            ),
+            'interval' => array($since, $until)
+        ));
+        $this->assertGreaterThan(0, $searches);
+        $search = $searches[0];
+        $this->assertArrayHasKey('name', $search);
+        $this->assertArrayHasKey('items', $search);
+        $this->assertEquals('(REL-CAP-WIN-CPU)', $search['name']);
+        $this->assertGreaterThan(0, $search['items']);
+        $item = $search['items'][0];
+        $this->assertObjectHasAttribute('itemid', $item);
+        $this->assertObjectHasAttribute('name', $item);
+        $this->assertObjectHasAttribute('hosts', $item);
+        $this->assertObjectHasAttribute('computed', $item);
+        $host = $item->hosts[0];
+        $this->assertObjectHasAttribute('hostid', $host);
+        $this->assertObjectHasAttribute('host', $host);
+        foreach ($item->computed as $computed) {
+            $this->assertArrayHasKey('name', $computed);
+            $this->assertArrayHasKey('value', $computed);
+        }
+    }
 }
