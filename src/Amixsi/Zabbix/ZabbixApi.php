@@ -1359,12 +1359,13 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
     public function computedHistoryItemsSearch($options)
     {
         $api = $this;
-        $names = (array)$options['name'];
+        $paramItems = (array)$options['item'];
         list($since, $until) = $options['interval'];
         $computed = $options['computed'];
-        $historyType = isset($options['historyType']) ? $options['historyType'] : 0;
         $maxItem = isset($options['maxItem']) ? $options['maxItem'] : 10;
-        $searches = array_map(function ($name) use ($api, $since, $until, $computed, $historyType, $maxItem) {
+        $searches = array_map(function ($paramItem) use ($api, $since, $until, $computed, $maxItem) {
+            $name = $paramItem['name'];
+            $historyType = $paramItem['history'];
             $items = $api->itemGet(array(
                 'output' => array('itemid', 'name'),
                 'selectHosts' => array('hostid', 'host'),
@@ -1405,7 +1406,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
                 'name' => $name,
                 'items' => array_values($indexedItems),
             );
-        }, $names);
+        }, $paramItems);
         return $searches;
     }
 

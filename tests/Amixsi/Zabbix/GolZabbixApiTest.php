@@ -100,7 +100,9 @@ class GolZabbixApiTest extends \PHPUnit_Framework_TestCase
         $until = \DateTime::createFromFormat('Y-m-d H:i:s', '2017-10-16 10:00:00');
         $api = $this->api;
         $searches = $api->computedHistoryItemsSearch(array(
-            'name' => array('(REL-CAP-WIN-CPU)'),
+            'item' => array(
+                array('name' => '(REL-CAP-WIN-CPU)', 'history' => 0),
+            ),
             'computed' => array(
                 array('type' => 'avg', 'range' => array(0, 1), 'name' => 'avg'),
                 array('type' => 'avg', 'range' => array(0, 0.1), 'name' => 'avg_0_10'),
