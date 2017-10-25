@@ -1365,25 +1365,27 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         $maxItem = isset($options['maxItem']) ? $options['maxItem'] : 10;
         $searches = array_map(function ($paramItem) use ($api, $since, $until, $computed, $maxItem) {
             $name = $paramItem['name'];
-            $historyType = $paramItem['history'];
             $items = $api->itemGet(array(
-                'output' => array('itemid', 'name'),
+                'output' => array('itemid', 'name', 'value_type'),
                 'selectHosts' => array('hostid', 'host'),
+                'selectInterfaces' => array('interfaceid', 'hostid', 'ip', 'dns'),
                 'search' => array(
                     'name' => $name
                 )
             ));
             $indexedItems = array();
+            $valueType = 0;
             foreach ($items as $item) {
                 $item->values = array();
                 $indexedItems[$item->itemid] = $item;
+                $valueType = $item->value_type;
             }
             $itemids = array_keys($indexedItems);
             $offset = 0;
             $ids = array_slice($itemids, $offset, $maxItem);
             while (count($ids) > 0) {
                 $history = $api->historyGet($params = array(
-                    'history' => $historyType,
+                    'history' => $valueType,
                     'itemids' => $ids,
                     'time_from' => $since->getTimestamp(),
                     'time_till' => $until->getTimestamp(),
@@ -1415,8 +1417,8 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         sort($item->values);
         return array_map(function ($c) use ($item) {
             $value = null;
-            if ($c['type'] == 'avg') {
-                $n = count($item->values);
+            $n = count($item->values);
+            if ($n > 0 && $c['type'] == 'avg') {
                 list($start, $end) = $c['range'];
                 $offsetStart = floor($start * $n);
                 $offsetEnd = floor($end * $n);

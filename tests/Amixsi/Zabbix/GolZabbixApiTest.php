@@ -120,6 +120,7 @@ class GolZabbixApiTest extends \PHPUnit_Framework_TestCase
         $this->assertObjectHasAttribute('itemid', $item);
         $this->assertObjectHasAttribute('name', $item);
         $this->assertObjectHasAttribute('hosts', $item);
+        $this->assertObjectHasAttribute('interfaces', $item);
         $this->assertObjectHasAttribute('computed', $item);
         $host = $item->hosts[0];
         $this->assertObjectHasAttribute('hostid', $host);
