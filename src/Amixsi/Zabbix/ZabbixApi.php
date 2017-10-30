@@ -1361,7 +1361,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         $api = $this;
         $paramItems = (array)$options['item'];
         list($since, $until) = $options['interval'];
-        $computed = $options['computed'];
+        $computed = isset($options['computed']) ? $options['computed'] : array();
         $maxItem = isset($options['maxItem']) ? $options['maxItem'] : 10;
         $searches = array_map(function ($paramItem) use ($api, $since, $until, $computed, $maxItem) {
             $name = $paramItem['name'];
