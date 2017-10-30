@@ -1365,6 +1365,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         $maxItem = isset($options['maxItem']) ? $options['maxItem'] : 10;
         $searches = array_map(function ($paramItem) use ($api, $since, $until, $computed, $maxItem) {
             $name = $paramItem['name'];
+            $computed = isset($paramItem['computed']) ? $paramItem['computed'] : $computed;
             $items = $api->itemGet(array(
                 'output' => array('itemid', 'name', 'value_type'),
                 'selectHosts' => array('hostid', 'host'),
@@ -1418,14 +1419,23 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return array_map(function ($c) use ($item) {
             $value = null;
             $n = count($item->values);
-            if ($n > 0 && $c['type'] == 'avg') {
-                list($start, $end) = $c['range'];
-                $offsetStart = floor($start * $n);
-                $offsetEnd = floor($end * $n);
-                $values = array_slice($item->values, $offsetStart, $offsetEnd - $offsetStart);
-                $value = array_sum($values);
-                if ($value) {
-                    $value /= count($values);
+            if ($n > 0) {
+                switch ($c['type']) {
+                case 'avg':
+                    list($start, $end) = $c['range'];
+                    $offsetStart = floor($start * $n);
+                    $offsetEnd = floor($end * $n);
+                    $values = array_slice($item->values, $offsetStart, $offsetEnd - $offsetStart);
+                    $value = array_sum($values);
+                    if ($value) {
+                        $value /= count($values);
+                    }
+                    break;
+                case 'lastvalue':
+                    $value = $item->values[$n - 1];
+                    break;
+                default:
+                    throw new Exception('Invalid computed type: ' . $c['type']);
                 }
             }
             return array(
