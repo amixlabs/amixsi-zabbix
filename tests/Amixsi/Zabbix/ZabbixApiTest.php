@@ -67,6 +67,27 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
         $this->assertObjectHasAttribute('value', $current->relatedObject);
     }
 
+    public function testNormalizeEvents()
+    {
+        $event = new \stdClass();
+        $event->objectid = 71165;
+        $event->clock = 1509503407;
+        $since = new \DateTime('2017-11-01 00:00:00');
+        $until = new \DateTime('2017-11-01 23:59:59');
+        $events = array($event);
+        $normalizedEvents = $this->api->normalizeEvents(
+            $events,
+            $since,
+            $until
+        );
+        $this->assertEquals(2, count($normalizedEvents));
+        foreach ($normalizedEvents as $normalizedEvent) {
+            $this->assertObjectHasAttribute('objectid', $normalizedEvent);
+            $this->assertObjectHasAttribute('clock', $normalizedEvent);
+            $this->assertObjectHasAttribute('elapsed', $normalizedEvent);
+        }
+    }
+
     public function testAvailabilityByTriggers2()
     {
         $since = new \DateTime('yesterday');
@@ -151,62 +172,6 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
         $this->assertInternalType('array', $apps[0]->templateids);
     }
 
-    public function testGroupItemApplication()
-    {
-        $groupItems = $this->api->groupItemApplicationGet(array(
-            'applicationids' => array(92135, 92206),
-        ));
-        $this->assertArrayHasKey('groups', $groupItems);
-        $this->assertArrayHasKey('commonKeys', $groupItems);
-        $groups = $groupItems['groups'];
-        $commonKeys = $groupItems['commonKeys'];
-        $this->assertInternalType('array', $groups);
-        $this->assertInternalType('array', $commonKeys);
-        $expectedCommonKeys = array(
-            "hostname",
-            "hostid",
-            "hostip",
-            "overallocation",
-            "status",
-            "compression_compressed_capacity",
-            "mdisk_count",
-            "parent_mdisk_grp_name",
-            "warning",
-            "compression_uncompressed_capacity",
-            "real_capacity",
-            "compression_virtual_capacity",
-            "encrypt",
-            "used_capacity",
-            "type",
-            "easy_tier_status",
-            "virtual_capacity",
-            "child_mdisk_grp_capacity",
-            "vdisk_count",
-            "parent_mdisk_grp_id",
-            "extent_size",
-            "name",
-            "easy_tier",
-            "free_capacity",
-            "child_mdisk_grp_count",
-            "capacity"
-        );
-        sort($expectedCommonKeys);
-        sort($commonKeys);
-        $this->assertEquals($expectedCommonKeys, $commonKeys);
-        $group = $groups[0];
-        foreach ($commonKeys as $key) {
-            $this->assertArrayHasKey($key, $group);
-            $item = $group[$key];
-            $this->assertArrayHasKey('name', $item);
-            $this->assertArrayHasKey('lastvalue', $item);
-            if (!in_array($key, array('hostname', 'hostid', 'hostip'))) {
-                $this->assertArrayHasKey('itemid', $item);
-                $this->assertArrayHasKey('lastclock', $item);
-                $this->assertArrayHasKey('prevvalue', $item);
-            }
-        }
-    }
-
     public function testTriggersSearch()
     {
         $triggers = $this->api->triggersSearch(array(
@@ -284,7 +249,7 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
 
     public function testHistoryHost()
     {
-        $name = 'DC-SW7377';
+        $name = 'PRD-ZABBIX_DB-GOLL1007';
         $since = new \DateTime();
         $until = clone $since;
         $since->sub(new \DateInterval('PT10M'));
