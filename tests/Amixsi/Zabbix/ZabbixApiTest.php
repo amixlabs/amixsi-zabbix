@@ -23,22 +23,31 @@ class ZabbixApiTest extends \PHPUnit_Framework_TestCase
         $this->api = new ZabbixApi($apiUrl, $user, $password, $logger);
     }
 
-    public function testRouterReportGet()
+    public function testTriggerByGroups()
     {
         $since = new \DateTime('yesterday');
         $since->add(new \DateInterval('PT8H'));
         $until = clone $since;
         $until->add(new \DateInterval('PT03H59M59S'));
-        $triggers = $this->api->routerReportGet($since, $until);
-        $triggers = array_filter($triggers, function ($trigger) {
-            foreach (array('Serial', 'FastEthernet', 'GigabitEthernet') as $word) {
-                if (stripos($trigger->description, $word) !== false) {
-                    return true;
-                }
-                return false;
-            }
-        });
+        $limit = 10;
+        $groups = $this->api->hostgroupGet(array(
+            'output' => array('groupid', 'name'),
+            'monitored_hosts' => true,
+            'with_triggers' => true,
+            'filter' => array(
+                'name' => 'Routers'
+            )
+        ));
+        $triggers = $this->api->triggerByGroups($groups, $limit);
         $this->assertGreaterThan(0, count($triggers));
+        foreach ($triggers as $trigger) {
+            $this->assertObjectHasAttribute('triggerid', $trigger);
+            $this->assertObjectHasAttribute('description', $trigger);
+            $this->assertObjectHasAttribute('expression', $trigger);
+            $this->assertObjectHasAttribute('value', $trigger);
+            $this->assertObjectHasAttribute('hosts', $trigger);
+            $this->assertObjectHasAttribute('host', $trigger);
+        }
     }
 
     public function testPriorityEventGet()

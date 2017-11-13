@@ -66,7 +66,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         return ($elapsed - $problem) / $elapsed;
     }
 
-    public function triggerByGroups($groups)
+    public function triggerByGroups($groups, $limit = 25000)
     {
         $logger = $this->logger;
         $groupIds = array_map(function ($group) {
@@ -79,12 +79,16 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         $params = array(
             'groupids' => $groupIds,
             'monitored' => true,
-            'expandDescription' => true,
+            'expandDescription' => true,            
             'selectHosts' => 'extend',
             'output' => array('triggerid', 'description', 'expression', 'value'),
-            'limit' => 25000
+            'limit' => $limit
         );
-        return $this->triggerGet($params);
+        return array_map(function ($trigger) {
+            $host = current($trigger->hosts);
+            $trigger->host = $host->host;
+            return $trigger;
+        }, $this->triggerGet($params));
     }
 
     public function triggerByPriorities($priorities)
