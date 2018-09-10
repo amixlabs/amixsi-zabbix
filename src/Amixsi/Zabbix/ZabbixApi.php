@@ -79,7 +79,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         $params = array(
             'groupids' => $groupIds,
             'monitored' => true,
-            'expandDescription' => true,            
+            'expandDescription' => true,
             'selectHosts' => 'extend',
             'output' => array('triggerid', 'description', 'expression', 'value'),
             'limit' => $limit
@@ -1361,13 +1361,18 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
     public function computedHistoryItemsSearch($options)
     {
         $api = $this;
+        $logger = $this->logger;
         $paramItems = (array)$options['item'];
         list($since, $until) = $options['interval'];
         $computed = isset($options['computed']) ? $options['computed'] : array();
         $maxItem = isset($options['maxItem']) ? $options['maxItem'] : 10;
-        $searches = array_map(function ($paramItem) use ($api, $since, $until, $computed, $maxItem) {
+        $searches = array_map(function ($paramItem) use ($api, $logger, $since, $until, $computed, $maxItem) {
             $name = $paramItem['name'];
             $computed = isset($paramItem['computed']) ? $paramItem['computed'] : $computed;
+            if ($logger != null) {
+                $logger->debug('itemGet...');
+            }
+            $start = microtime(true);
             $items = $api->itemGet(array(
                 'output' => array('itemid', 'name', 'value_type'),
                 'selectHosts' => array('hostid', 'host'),
@@ -1376,6 +1381,13 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
                     'name' => $name
                 )
             ));
+            $elapsed = microtime(true) - $start;
+            if ($logger != null) {
+                $logger->debug('itemGet(): {count}, {elapsed}', array(
+                    'count' => count($items),
+                    'elapsed' => $elapsed
+                ));
+            }
             $indexedItems = array();
             $valueType = 0;
             foreach ($items as $item) {
@@ -1387,6 +1399,10 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             $offset = 0;
             $ids = array_slice($itemids, $offset, $maxItem);
             while (count($ids) > 0) {
+                if ($logger != null) {
+                    $logger->debug('historyGet...');
+                }
+                $start = microtime(true);
                 $history = $api->historyGet($params = array(
                     'history' => $valueType,
                     'itemids' => $ids,
@@ -1395,6 +1411,13 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
                     'sortfield' => 'itemid',
                     'output' => 'extend'
                 ));
+                $elapsed = microtime(true) - $start;
+                if ($logger != null) {
+                    $logger->debug('historyGet(): {count}, {elapsed}', array(
+                        'count' => count($history),
+                        'elapsed' => $elapsed
+                    ));
+                }
                 foreach ($history as $item) {
                     $indexedItem = $indexedItems[$item->itemid];
                     $indexedItem->values[] = (float)$item->value;
@@ -1423,21 +1446,21 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             $n = count($item->values);
             if ($n > 0) {
                 switch ($c['type']) {
-                case 'avg':
-                    list($start, $end) = $c['range'];
-                    $offsetStart = floor($start * $n);
-                    $offsetEnd = floor($end * $n);
-                    $values = array_slice($item->values, $offsetStart, $offsetEnd - $offsetStart);
-                    $value = array_sum($values);
-                    if ($value) {
-                        $value /= count($values);
-                    }
-                    break;
-                case 'lastvalue':
-                    $value = $item->values[$n - 1];
-                    break;
-                default:
-                    throw new Exception('Invalid computed type: ' . $c['type']);
+                    case 'avg':
+                        list($start, $end) = $c['range'];
+                        $offsetStart = floor($start * $n);
+                        $offsetEnd = floor($end * $n);
+                        $values = array_slice($item->values, $offsetStart, $offsetEnd - $offsetStart);
+                        $value = array_sum($values);
+                        if ($value) {
+                            $value /= count($values);
+                        }
+                        break;
+                    case 'lastvalue':
+                        $value = $item->values[$n - 1];
+                        break;
+                    default:
+                        throw new Exception('Invalid computed type: ' . $c['type']);
                 }
             }
             return array(
@@ -1445,6 +1468,5 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
                 'value' => $value
             );
         }, (array)$computed);
-
     }
 }
