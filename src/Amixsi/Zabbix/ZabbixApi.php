@@ -213,6 +213,10 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         $triggersEvents = array();
         foreach ($events as $event) {
             $trigger = $event->relatedObject;
+            // After Zabbix 4 $event->relatedObject can be empty
+            if (!$trigger) {
+                continue;
+            }
             $triggerid = $trigger->triggerid;
             $event = clone $event;
             unset($event->relatedObject);
@@ -324,7 +328,12 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
         if (!count($triggers)) {
             if (is_array($priorities) && count($priorities) > 0) {
                 $events = array_filter($events, function ($event) use ($priorities) {
-                    return in_array($event->relatedObject->priority, $priorities);
+                    $trigger = $event->relatedObject;
+                    // After Zabbix 4 $event->relatedObject can be empty
+                    if (!$trigger) {
+                        return false;
+                    }
+                    return in_array($trigger->priority, $priorities);
                 });
             }
             $hostids = array();
@@ -347,6 +356,10 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             }
             foreach ($events as $event) {
                 $trigger = $event->relatedObject;
+                // After Zabbix 4 $event->relatedObject can be empty
+                if (!$trigger) {
+                    continue;
+                }
                 $trigger->hosts = $event->hosts;
                 $groups = array();
                 foreach ($event->hosts as $h) {
