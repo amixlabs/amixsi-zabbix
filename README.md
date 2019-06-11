@@ -1,4 +1,4 @@
-Zabbix library
+# Zabbix library
 
 ## Unit tests
 
@@ -10,11 +10,11 @@ We need setup passwords for users:
 
 Run tests:
 
-```
+```bash
 AMIX_PASS=... AMIX_REPORTS_PASS=... AMIX_API_MAINTENANCE=... DASA_USER=... DASA_PASS=... composer test
 ```
 
-# Docker
+## Docker
 
 ```bash
 docker-compose run --rm shell
