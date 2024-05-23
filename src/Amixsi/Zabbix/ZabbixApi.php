@@ -1374,25 +1374,29 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
     public function computedHistoryItemsSearch($options)
     {
         $api = $this;
+        $groupids = array_key_exists('groupids', $options)
+            ? $options['groupids']
+            : null;
         $logger = $this->logger;
         $paramItems = (array)$options['item'];
         list($since, $until) = $options['interval'];
         $computed = isset($options['computed']) ? $options['computed'] : array();
         $maxItem = isset($options['maxItem']) ? $options['maxItem'] : 10;
-        $searches = array_map(function ($paramItem) use ($api, $logger, $since, $until, $computed, $maxItem) {
+        $searches = array_map(function ($paramItem) use ($api, $logger, $since, $until, $computed, $maxItem, $groupids) {
             $name = $paramItem['name'];
             $computed = isset($paramItem['computed']) ? $paramItem['computed'] : $computed;
             if ($logger != null) {
-                $logger->debug('itemGet...');
+                $logger->debug('itemGet(' . $since->format('Y-m-d H:i:s') . ', ' . $until->format('Y-m-d H:i:s') . ')');
             }
             $start = microtime(true);
             $items = $api->itemGet(array(
                 'output' => array('itemid', 'name', 'value_type'),
-                'selectHosts' => array('hostid', 'host'),
+                'selectHosts' => array('hostid', 'host', 'name'),
                 'selectInterfaces' => array('interfaceid', 'hostid', 'ip', 'dns'),
                 'search' => array(
                     'name' => $name
-                )
+                ),
+                'groupids' => $groupids
             ));
             $elapsed = microtime(true) - $start;
             if ($logger != null) {
@@ -1413,17 +1417,26 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             $ids = array_slice($itemids, $offset, $maxItem);
             while (count($ids) > 0) {
                 if ($logger != null) {
-                    $logger->debug('historyGet...');
+                    $logger->debug('historyGet(' . $since->format('Y-m-d H:i:s') . ', ' . $until->format('Y-m-d H:i:s') . ')');
                 }
                 $start = microtime(true);
-                $history = $api->historyGet($params = array(
-                    'history' => $valueType,
-                    'itemids' => $ids,
-                    'time_from' => $since->getTimestamp(),
-                    'time_till' => $until->getTimestamp(),
-                    'sortfield' => 'itemid',
-                    'output' => 'extend'
-                ));
+                $tries = 0;
+                do {
+                    $error = null;
+                    try {
+                        $history = $api->historyGet($params = array(
+                            'history' => $valueType,
+                            'itemids' => $ids,
+                            'time_from' => $since->getTimestamp(),
+                            'time_till' => $until->getTimestamp(),
+                            'sortfield' => 'itemid',
+                            'output' => 'extend'
+                        ));
+                    } catch(\Exception $e) {
+                        $error = $e;
+                        $tries += 1;
+                    }
+                } while ($error !== null && $tries < 3);
                 $elapsed = microtime(true) - $start;
                 if ($logger != null) {
                     $logger->debug('historyGet(): {count}, {elapsed}', array(
