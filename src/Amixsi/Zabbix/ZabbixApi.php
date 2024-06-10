@@ -1472,6 +1472,12 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
             $n = count($item->values);
             if ($n > 0) {
                 switch ($c['type']) {
+                    case 'max':
+                        $value = max($item->values);
+                        break;
+                    case 'min':
+                        $value = min($item->values);
+                        break;
                     case 'avg':
                         list($start, $end) = $c['range'];
                         $offsetStart = floor($start * $n);
@@ -1486,7 +1492,7 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
                         $value = $item->values[$n - 1];
                         break;
                     default:
-                        throw new Exception('Invalid computed type: ' . $c['type']);
+                        throw new \Exception('Invalid computed type: ' . $c['type']);
                 }
             }
             return array(
