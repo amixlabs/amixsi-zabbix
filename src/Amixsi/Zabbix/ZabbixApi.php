@@ -10,13 +10,17 @@ use Amixsi\Helper\DateRange;
  * @SuppressWarnings(PHPMD.TooManyMethods)
  * @SuppressWarnings(PHPMD.ExcessiveClassComplexity)
  */
-class ZabbixApi extends \ZabbixApi\ZabbixApi
+class ZabbixApi extends ZabbixApiAbstract
 {
     private $logger = null;
 
     public function __construct($apiUrl = '', $user = '', $password = '', LoggerInterface $logger = null)
     {
-        parent::__construct($apiUrl, $user, $password);
+        if ($user === 'api-token') {
+            parent::__construct($apiUrl, '', '', '', '', $password);
+        } else {
+            parent::__construct($apiUrl, $user, $password);
+        }
         if ($logger != null) {
             $this->setLogger($logger);
         }
@@ -1437,6 +1441,14 @@ class ZabbixApi extends \ZabbixApi\ZabbixApi
                         $tries += 1;
                     }
                 } while ($error !== null && $tries < 3);
+                if ($error !== null) {
+                    if ($logger != null) {
+                        $logger->debug('historyGet({params})', array(
+                            'params' => var_export($params, true)
+                        ));
+                    }
+                    throw $error;
+                }
                 $elapsed = microtime(true) - $start;
                 if ($logger != null) {
                     $logger->debug('historyGet(): {count}, {elapsed}', array(
