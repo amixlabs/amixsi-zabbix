@@ -314,8 +314,14 @@ abstract class ZabbixApiAbstract
 
         // get file handler
         $fileHandler = @fopen($this->getApiUrl(), 'rb', false, $streamContext);
-        if(!$fileHandler)
-            throw new Exception('Could not connect to "'.$this->getApiUrl().'"');
+        if (!$fileHandler) {
+            $error = error_get_last();
+            $message = isset($error['message']) ? $error['message'] : 'Unknown error';
+            if (strpos($message, '413') !== false || stripos($message, 'Request Entity Too Large') !== false) {
+                $message .= ' (Payload size: ' . strlen($this->requestEncoded) . ' bytes)';
+            }
+            throw new Exception($message);
+        }
 
         // get response
         $this->response = @stream_get_contents($fileHandler);
